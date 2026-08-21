@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: rolecompass-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5433/rolecompass
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8080
+
+application:
+  security:
+    jwt:
+      # Base64 encoded 256-bit secret key (HMAC-SHA256)
+      secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      expiration: 86400000 # 24 hours in milliseconds
