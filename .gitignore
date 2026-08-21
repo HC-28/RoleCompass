@@ -1,0 +1,21 @@
+# Node & React
+frontend/node_modules/
+frontend/dist/
+frontend/.npm/
+
+# Spring Boot & Java
+rolecompass-backend/target/
+*.class
+*.jar
+*.war
+.mvn/
+!rolecompass-backend/.mvn/wrapper/maven-wrapper.jar
+
+# IDE & OS Files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Docker volumes
+postgres_data/
