@@ -1,16 +1,114 @@
-# AI Agents Workflow & Demo Scope
+# RoleCompass — AGENTS.md
 
-## Project Identity
-AI-Based Job Role Prediction System (Demonstration Prototype)(RoleCompass).
+# 1. PROJECT IDENTITY
 
-## Core Architecture Directives
-1. Client-Side: React (Vite) + Tailwind CSS. 
-2. Client Logic Constraint: Zero business logic on the client; it only renders received question text and 5 Likert options.
-3. Server-Side: Spring Boot + PostgreSQL + Spring Security (JWT).
-4. ML Layer (Demo Mock): Spring Boot directly returns a structured prediction JSON payload without calling the external Python service[cite: 1, 3].
-5. Question Standard: 5-point Likert scale obeying the exposure-independence rule.
+Project Name: RoleCompass
 
-## Active Roles & Responsibilities
-- Architect (Gemini): Directs structure and reviews API contracts.
-- Backend Builder (Antigravity): Implements User Auth, Question & Session Entities, Seed Data, and Session Endpoints.
-- Frontend Builder (Cursor): Implements Login/Register forms with validation, the quiz interface, and a clean result dashboard.
+Project Type:
+AI-Based Job Role Prediction System
+
+Current State:
+Demonstration Prototype / Vertical Slice
+
+RoleCompass predicts the best-fit IT job role for a student from these 10 target roles:
+
+1. Backend Developer
+2. Frontend Developer
+3. Full Stack Developer
+4. Data Scientist
+5. Data Engineer
+6. Cybersecurity Engineer
+7. DevOps Engineer
+8. Cloud Engineer
+9. Android Developer
+10. QA / Test Automation Engineer
+
+The system consists of two distinct decision layers:
+
+1. Adaptive Routing Engine
+  - Rule-based
+  - Server-side
+  - Decides what questions should be asked next
+  - Maintains the candidate-role set
+  - Does NOT make the final prediction
+
+2. Machine Learning Prediction Layer
+  - Random Forest classifier
+  - Receives the final 31-feature vector
+  - Performs the terminal ten-class prediction
+  - Returns the top predicted role and probabilities
+
+These two layers MUST remain separate.
+
+---
+
+# 2. TECHNOLOGY STACK
+
+## Frontend
+
+- React
+- Vite
+- Tailwind CSS
+- Premium SaaS design
+- Dark mode / light mode
+
+## Backend
+
+- Spring Boot 3
+- Java 17
+- Spring Data JPA
+- Hibernate 6
+- Spring Security
+- JJWT 0.12.x
+
+## Database
+
+- PostgreSQL 15
+- Local development through Docker
+- Database name: rolecompass
+
+## ML Service
+
+- Python
+- FastAPI
+- Planned Random Forest model
+- Current prediction endpoint may still be mocked for vertical-slice development
+
+---
+
+# 3. NON-NEGOTIABLE ARCHITECTURE RULES
+
+## 3.1 DUMB CLIENT RULE
+
+React is a presentation client only.
+
+React MUST NOT contain:
+
+- RIASEC calculations
+- psychometric scoring
+- technical scoring
+- feature aggregation
+- candidate-role elimination
+- routing predicates
+- role prediction
+- machine-learning logic
+- business rules based on answers
+
+React only:
+
+1. receives question payloads from the backend
+2. renders question text
+3. renders response options
+4. collects Likert values
+5. sends answers to the backend
+6. renders server responses
+7. renders the final result
+
+The frontend should conceptually only understand:
+
+```json
+{
+  "id": 123,
+  "text": "Question text",
+  "options": [1, 2, 3, 4, 5]
+}
