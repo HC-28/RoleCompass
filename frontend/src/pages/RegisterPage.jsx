@@ -1,10 +1,15 @@
+import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { register } from '../api/auth'
 import AuthCard from '../components/AuthCard'
 import Layout from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
-import { extractErrorMessage, validateEmail, validatePassword } from '../utils/validation'
+import {
+  extractErrorMessage,
+  validateEmail,
+  validatePassword,
+} from '../utils/validation'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -13,6 +18,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+
   const [fieldErrors, setFieldErrors] = useState({})
   const [apiError, setApiError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -53,21 +59,25 @@ export default function RegisterPage() {
     <Layout>
       <AuthCard
         title="Create your account"
-        subtitle="Register to discover your best-fit job role."
+        subtitle="Get started with your personalized career role assessment."
         footerText="Already have an account?"
         footerLinkText="Sign in"
         footerLinkTo="/login"
+        maxWidth="max-w-md"
       >
-        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {apiError && (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
               {apiError}
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-300">
-              Email
+            <label
+              htmlFor="email"
+              className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300"
+            >
+              Email address
             </label>
             <input
               id="email"
@@ -75,16 +85,19 @@ export default function RegisterPage() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+              className="input-field"
               placeholder="you@example.com"
             />
             {fieldErrors.email && (
-              <p className="mt-1.5 text-sm text-rose-400">{fieldErrors.email}</p>
+              <p className="mt-1 text-xs text-rose-500 dark:text-rose-400">{fieldErrors.email}</p>
             )}
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-300">
+            <label
+              htmlFor="password"
+              className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300"
+            >
               Password
             </label>
             <input
@@ -93,18 +106,18 @@ export default function RegisterPage() {
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+              className="input-field"
               placeholder="At least 8 characters"
             />
             {fieldErrors.password && (
-              <p className="mt-1.5 text-sm text-rose-400">{fieldErrors.password}</p>
+              <p className="mt-1 text-xs text-rose-500 dark:text-rose-400">{fieldErrors.password}</p>
             )}
           </div>
 
           <div>
             <label
               htmlFor="confirmPassword"
-              className="mb-1.5 block text-sm font-medium text-slate-300"
+              className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300"
             >
               Confirm password
             </label>
@@ -114,22 +127,35 @@ export default function RegisterPage() {
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+              className="input-field"
               placeholder="Repeat your password"
             />
             {fieldErrors.confirmPassword && (
-              <p className="mt-1.5 text-sm text-rose-400">{fieldErrors.confirmPassword}</p>
+              <p className="mt-1 text-xs text-rose-500 dark:text-rose-400">
+                {fieldErrors.confirmPassword}
+              </p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-xl bg-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary w-full py-3"
           >
-            {isSubmitting ? 'Creating account…' : 'Create account'}
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating account…
+              </span>
+            ) : (
+              'Create account'
+            )}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+          By signing up, you agree to complete the assessment honestly.
+        </p>
       </AuthCard>
     </Layout>
   )

@@ -1,7 +1,17 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+export function validateFullName(name) {
+  if (!name || !name.trim()) {
+    return 'Full name is required'
+  }
+  if (name.trim().length < 2) {
+    return 'Name must be at least 2 characters'
+  }
+  return null
+}
+
 export function validateEmail(email) {
-  if (!email.trim()) {
+  if (!email || !email.trim()) {
     return 'Email is required'
   }
   if (!EMAIL_PATTERN.test(email.trim())) {
@@ -27,3 +37,4 @@ export function extractErrorMessage(error, fallback) {
   }
   return fallback
 }
+

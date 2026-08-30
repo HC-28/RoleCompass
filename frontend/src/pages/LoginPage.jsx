@@ -1,3 +1,4 @@
+import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../api/auth'
@@ -50,16 +51,16 @@ export default function LoginPage() {
         footerLinkText="Create one"
         footerLinkTo="/register"
       >
-        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {apiError && (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
               {apiError}
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-300">
-              Email
+            <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
+              Email address
             </label>
             <input
               id="email"
@@ -67,16 +68,16 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+              className="input-field"
               placeholder="you@example.com"
             />
             {fieldErrors.email && (
-              <p className="mt-1.5 text-sm text-rose-400">{fieldErrors.email}</p>
+              <p className="mt-1.5 text-xs text-rose-500 dark:text-rose-400">{fieldErrors.email}</p>
             )}
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-300">
+            <label htmlFor="password" className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
               Password
             </label>
             <input
@@ -85,33 +86,34 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
-              placeholder="At least 8 characters"
+              className="input-field"
+              placeholder="Enter your password"
             />
             {fieldErrors.password && (
-              <p className="mt-1.5 text-sm text-rose-400">{fieldErrors.password}</p>
+              <p className="mt-1.5 text-xs text-rose-500 dark:text-rose-400">{fieldErrors.password}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-xl bg-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary w-full py-3"
           >
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Signing in…
+              </span>
+            ) : (
+              'Sign in'
+            )}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
-          By continuing, you agree to complete the RoleCompass assessment honestly.
+        <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
+          Protected by end-to-end secure session authentication.
         </p>
       </AuthCard>
-
-      <p className="mt-6 text-center text-sm text-slate-500">
-        <Link to="/register" className="text-indigo-400 hover:text-indigo-300">
-          New here? Start with registration
-        </Link>
-      </p>
     </Layout>
   )
 }
