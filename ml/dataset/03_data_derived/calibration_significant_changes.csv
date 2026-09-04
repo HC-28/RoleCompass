@@ -1,0 +1,150 @@
+Role,Feature,SO_value,Calibrated_value,Change,Direction
+Backend Developer,SERVER,0.9,0.95,0.05,UP
+Backend Developer,STORAGE,0.7,0.85,0.15,UP
+Backend Developer,API,0.85,0.925,0.075,UP
+Backend Developer,UI,0.15,0.075,-0.075,DOWN
+Backend Developer,STATE,0.2,0.1,-0.1,DOWN
+Backend Developer,BUILD,0.35,0.525,0.175,UP
+Backend Developer,INFRA,0.25,0.475,0.225,UP
+Backend Developer,CONTAINER,0.25,0.475,0.225,UP
+Backend Developer,CLOUD,0.35,0.507,0.157,UP
+Backend Developer,STATS,0.2,0.432,0.232,UP
+Backend Developer,MODEL,0.1,0.382,0.282,UP
+Backend Developer,PIPELINE,0.3,0.482,0.182,UP
+Backend Developer,HARDENING,0.35,0.245,-0.105,DOWN
+Backend Developer,TESTDES,0.4,0.2,-0.2,DOWN
+Backend Developer,TESTAUTO,0.35,0.175,-0.175,DOWN
+Backend Developer,OBSERV,0.5,0.25,-0.25,DOWN
+Backend Developer,PERF,0.7,0.35,-0.35,DOWN
+Backend Developer,FULLSPEC,0.3,0.15,-0.15,DOWN
+Frontend Developer,SERVER,0.15,0.539,0.389,UP
+Frontend Developer,STORAGE,0.25,0.125,-0.125,DOWN
+Frontend Developer,API,0.4,0.664,0.264,UP
+Frontend Developer,STATE,0.85,0.925,0.075,UP
+Frontend Developer,INFRA,0.1,0.05,-0.05,DOWN
+Frontend Developer,CONTAINER,0.1,0.05,-0.05,DOWN
+Frontend Developer,CLOUD,0.2,0.1,-0.1,DOWN
+Frontend Developer,STATS,0.1,0.05,-0.05,DOWN
+Frontend Developer,MODEL,0.1,0.05,-0.05,DOWN
+Frontend Developer,PIPELINE,0.1,0.05,-0.05,DOWN
+Frontend Developer,MOBILE,0.2,0.1,-0.1,DOWN
+Frontend Developer,HARDENING,0.1,0.05,-0.05,DOWN
+Frontend Developer,OBSERV,0.2,0.1,-0.1,DOWN
+Frontend Developer,FULLSPEC,0.35,0.175,-0.175,DOWN
+Full Stack Developer,SERVER,0.75,0.875,0.125,UP
+Full Stack Developer,STORAGE,0.6,0.723,0.123,UP
+Full Stack Developer,API,0.75,0.875,0.125,UP
+Full Stack Developer,UI,0.75,0.837,0.087,UP
+Full Stack Developer,STATE,0.65,0.788,0.138,UP
+Full Stack Developer,BUILD,0.45,0.54,0.09,UP
+Full Stack Developer,INFRA,0.3,0.38,0.08,UP
+Full Stack Developer,CONTAINER,0.3,0.465,0.165,UP
+Full Stack Developer,CLOUD,0.45,0.297,-0.153,DOWN
+Full Stack Developer,PIPELINE,0.35,0.267,-0.083,DOWN
+Full Stack Developer,MOBILE,0.2,0.1,-0.1,DOWN
+Full Stack Developer,THREAT,0.15,0.215,0.065,UP
+Full Stack Developer,TESTDES,0.4,0.2,-0.2,DOWN
+Full Stack Developer,TESTAUTO,0.35,0.175,-0.175,DOWN
+Full Stack Developer,OBSERV,0.4,0.2,-0.2,DOWN
+Full Stack Developer,PERF,0.65,0.325,-0.325,DOWN
+Full Stack Developer,FULLSPEC,0.9,0.8,-0.1,DOWN
+Data Scientist,STORAGE,0.65,0.725,0.075,UP
+Data Scientist,UI,0.1,0.05,-0.05,DOWN
+Data Scientist,STATE,0.1,0.05,-0.05,DOWN
+Data Scientist,BUILD,0.15,0.075,-0.075,DOWN
+Data Scientist,INFRA,0.1,0.225,0.125,UP
+Data Scientist,CONTAINER,0.1,0.05,-0.05,DOWN
+Data Scientist,PIPELINE,0.6,0.8,0.2,UP
+Data Scientist,THREAT,0.1,0.05,-0.05,DOWN
+Data Scientist,HARDENING,0.1,0.05,-0.05,DOWN
+Data Scientist,TESTDES,0.15,0.075,-0.075,DOWN
+Data Scientist,TESTAUTO,0.15,0.075,-0.075,DOWN
+Data Scientist,OBSERV,0.25,0.125,-0.125,DOWN
+Data Scientist,PERF,0.6,0.3,-0.3,DOWN
+Data Scientist,FULLSPEC,0.15,0.075,-0.075,DOWN
+Data Engineer,SERVER,0.4,0.46,0.06,UP
+Data Engineer,BUILD,0.55,0.39,-0.16,DOWN
+Data Engineer,INFRA,0.45,0.67,0.22,UP
+Data Engineer,CONTAINER,0.5,0.3,-0.2,DOWN
+Data Engineer,CLOUD,0.65,0.79,0.14,UP
+Data Engineer,STATS,0.55,0.73,0.18,UP
+Data Engineer,MODEL,0.35,0.61,0.26,UP
+Data Engineer,HARDENING,0.15,0.09,-0.06,DOWN
+Data Engineer,TESTDES,0.15,0.09,-0.06,DOWN
+Data Engineer,TESTAUTO,0.2,0.12,-0.08,DOWN
+Data Engineer,OBSERV,0.6,0.36,-0.24,DOWN
+Data Engineer,PERF,0.65,0.43,-0.22,DOWN
+Data Engineer,FULLSPEC,0.15,0.09,-0.06,DOWN
+Cybersecurity Engineer,SERVER,0.45,0.225,-0.225,DOWN
+Cybersecurity Engineer,STORAGE,0.45,0.225,-0.225,DOWN
+Cybersecurity Engineer,API,0.35,0.175,-0.175,DOWN
+Cybersecurity Engineer,CONTAINER,0.4,0.2,-0.2,DOWN
+Cybersecurity Engineer,CLOUD,0.45,0.312,-0.138,DOWN
+Cybersecurity Engineer,STATS,0.2,0.275,0.075,UP
+Cybersecurity Engineer,MODEL,0.15,0.25,0.1,UP
+Cybersecurity Engineer,THREAT,0.9,0.95,0.05,UP
+Cybersecurity Engineer,HARDENING,0.9,0.837,-0.063,DOWN
+Cybersecurity Engineer,TESTDES,0.3,0.359,0.059,UP
+Cybersecurity Engineer,TESTAUTO,0.3,0.359,0.059,UP
+Cybersecurity Engineer,OBSERV,0.5,0.25,-0.25,DOWN
+Cybersecurity Engineer,PERF,0.5,0.25,-0.25,DOWN
+Cybersecurity Engineer,FULLSPEC,0.2,0.1,-0.1,DOWN
+DevOps Engineer,SERVER,0.45,0.26,-0.19,DOWN
+DevOps Engineer,STORAGE,0.5,0.25,-0.25,DOWN
+DevOps Engineer,API,0.45,0.26,-0.19,DOWN
+DevOps Engineer,UI,0.1,0.05,-0.05,DOWN
+DevOps Engineer,STATE,0.1,0.05,-0.05,DOWN
+DevOps Engineer,INFRA,0.9,0.95,0.05,UP
+DevOps Engineer,CLOUD,0.75,0.875,0.125,UP
+DevOps Engineer,STATS,0.15,0.39,0.24,UP
+DevOps Engineer,MODEL,0.1,0.365,0.265,UP
+DevOps Engineer,THREAT,0.35,0.175,-0.175,DOWN
+DevOps Engineer,HARDENING,0.5,0.25,-0.25,DOWN
+DevOps Engineer,TESTDES,0.25,0.125,-0.125,DOWN
+DevOps Engineer,TESTAUTO,0.35,0.175,-0.175,DOWN
+DevOps Engineer,OBSERV,0.9,0.52,-0.38,DOWN
+DevOps Engineer,PERF,0.65,0.325,-0.325,DOWN
+DevOps Engineer,FULLSPEC,0.2,0.1,-0.1,DOWN
+Cloud Engineer,SERVER,0.45,0.27,-0.18,DOWN
+Cloud Engineer,STORAGE,0.65,0.463,-0.187,DOWN
+Cloud Engineer,API,0.55,0.33,-0.22,DOWN
+Cloud Engineer,BUILD,0.75,0.85,0.1,UP
+Cloud Engineer,STATS,0.15,0.49,0.34,UP
+Cloud Engineer,MODEL,0.1,0.46,0.36,UP
+Cloud Engineer,PIPELINE,0.6,0.76,0.16,UP
+Cloud Engineer,THREAT,0.4,0.458,0.058,UP
+Cloud Engineer,TESTDES,0.2,0.12,-0.08,DOWN
+Cloud Engineer,TESTAUTO,0.25,0.15,-0.1,DOWN
+Cloud Engineer,OBSERV,0.8,0.88,0.08,UP
+Cloud Engineer,PERF,0.6,0.36,-0.24,DOWN
+Cloud Engineer,FULLSPEC,0.2,0.12,-0.08,DOWN
+Android Developer,SERVER,0.55,0.675,0.125,UP
+Android Developer,API,0.55,0.725,0.175,UP
+Android Developer,UI,0.65,0.325,-0.325,DOWN
+Android Developer,STATE,0.65,0.325,-0.325,DOWN
+Android Developer,INFRA,0.15,0.075,-0.075,DOWN
+Android Developer,CONTAINER,0.15,0.075,-0.075,DOWN
+Android Developer,CLOUD,0.25,0.125,-0.125,DOWN
+Android Developer,STATS,0.1,0.05,-0.05,DOWN
+Android Developer,MODEL,0.2,0.1,-0.1,DOWN
+Android Developer,PIPELINE,0.15,0.075,-0.075,DOWN
+Android Developer,THREAT,0.15,0.075,-0.075,DOWN
+Android Developer,HARDENING,0.25,0.125,-0.125,DOWN
+Android Developer,TESTDES,0.35,0.292,-0.058,DOWN
+Android Developer,OBSERV,0.25,0.125,-0.125,DOWN
+Android Developer,PERF,0.6,0.533,-0.067,DOWN
+Android Developer,FULLSPEC,0.2,0.1,-0.1,DOWN
+QA / Test Automation Engineer,SERVER,0.35,0.61,0.26,UP
+QA / Test Automation Engineer,STORAGE,0.4,0.24,-0.16,DOWN
+QA / Test Automation Engineer,API,0.4,0.64,0.24,UP
+QA / Test Automation Engineer,UI,0.25,0.399,0.149,UP
+QA / Test Automation Engineer,STATE,0.25,0.399,0.149,UP
+QA / Test Automation Engineer,BUILD,0.45,0.67,0.22,UP
+QA / Test Automation Engineer,INFRA,0.2,0.12,-0.08,DOWN
+QA / Test Automation Engineer,CLOUD,0.2,0.12,-0.08,DOWN
+QA / Test Automation Engineer,STATS,0.25,0.528,0.278,UP
+QA / Test Automation Engineer,MODEL,0.15,0.468,0.318,UP
+QA / Test Automation Engineer,PIPELINE,0.25,0.528,0.278,UP
+QA / Test Automation Engineer,OBSERV,0.4,0.24,-0.16,DOWN
+QA / Test Automation Engineer,PERF,0.55,0.492,-0.058,DOWN
+QA / Test Automation Engineer,FULLSPEC,0.2,0.12,-0.08,DOWN

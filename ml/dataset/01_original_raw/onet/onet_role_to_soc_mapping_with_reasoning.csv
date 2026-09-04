@@ -1,0 +1,25 @@
+Target_Role,SOC_Code,SOC_Title,Weight,Reasoning
+Backend Developer,15-1252.00,Software Developers,0.5,Primary SOC. Backend devs build server software - direct match
+Backend Developer,15-1251.00,Computer Programmers,0.3,Programmers write server-side code - backend coding overlap
+Backend Developer,15-1254.00,Web Developers,0.2,"Web backend (APIs, server logic) overlaps with Web Developers SOC"
+Frontend Developer,15-1255.00,Web and Digital Interface Designers,0.55,Primary SOC. Frontend = designing and building visual interfaces
+Frontend Developer,15-1254.00,Web Developers,0.45,Web Developers includes frontend web developers as a subgroup
+Full Stack Developer,15-1252.00,Software Developers,0.4,Full stack backend component - same as software developers
+Full Stack Developer,15-1254.00,Web Developers,0.35,Web layer: Full stack devs cover both frontend and backend web
+Full Stack Developer,15-1255.00,Web and Digital Interface Designers,0.25,Frontend UI component of full stack development
+Data Scientist,15-2051.00,Data Scientists,0.65,Primary SOC - exact occupational match for data scientist
+Data Scientist,15-2051.01,Business Intelligence Analysts,0.2,BI Analysts do analytics work similar to applied data scientists
+Data Scientist,15-2051.02,Clinical Data Managers,0.15,Data management subspecialty - structural skills overlap
+Data Engineer,15-1243.00,Database Architects,0.45,Data Engineers design pipelines - closest match to architect work
+Data Engineer,15-1242.00,Database Administrators,0.3,"DBA work overlaps: schema management, optimization, monitoring"
+Data Engineer,15-1243.01,Data Warehousing Specialists,0.25,ETL and warehousing IS the core of data engineering work
+Cybersecurity Engineer,15-1212.00,Information Security Analysts,0.55,Primary SOC - security monitoring and defense-focused work
+Cybersecurity Engineer,15-1299.05,Information Security Engineers,0.45,Engineering subspecialty - implementation and pen-testing
+DevOps Engineer,15-1244.00,Network and Computer Systems Administrators,0.6,"Server/system operations is the core of DevOps: Linux, CI/CD"
+DevOps Engineer,15-1241.00,Computer Network Architects,0.4,IaC and network automation overlaps with network architect SOC
+Cloud Engineer,15-1241.00,Computer Network Architects,0.65,Cloud architecture directly matches network architect design work
+Cloud Engineer,15-1244.00,Network and Computer Systems Administrators,0.35,Cloud operations overlaps with traditional systems administration
+Android Developer,15-1252.00,Software Developers,0.7,Android dev is software development with Java/Kotlin languages
+Android Developer,15-1255.00,Web and Digital Interface Designers,0.3,Mobile UI/UX design thinking overlaps with interface design SOC
+QA / Test Automation Engineer,15-1253.00,Software Quality Assurance Analysts and Testers,0.75,Primary SOC - exact occupational match for QA/Test role
+QA / Test Automation Engineer,15-1251.00,Computer Programmers,0.25,Test automation scripting overlaps with programming/coding work

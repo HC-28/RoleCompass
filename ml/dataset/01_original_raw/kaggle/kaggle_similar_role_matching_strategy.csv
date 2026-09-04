@@ -1,0 +1,11 @@
+Target_Role,Kaggle2_Matching_Strategy,Kaggle3_Matching_Strategy,Kaggle1_Matching_Strategy
+Backend Developer,"Back End Developer, Backend Developer (exact in Kaggle2)",Backend Developer (Kaggle3 exact),"BACK END DEVELOPER, BACKEND patterns (Kaggle1)"
+Frontend Developer,"Frontend Developer, Web Developer (similar role - both do HTML/CSS/JS)",Frontend Developer (Kaggle3 exact),"FRONT END, FRONTEND, WEB DESIGNER (Kaggle1)"
+Full Stack Developer,"Full Stack Java Developer, Full Stack Python Developer (subspecialties)",Full Stack Developer (Kaggle3 exact),FULL STACK (Kaggle1)
+Data Scientist,"Data Scientist (exact), AIML (AI/ML engineers do data science work)",Data Scientist (Kaggle3 exact),"DATA SCIENTIST, MACHINE LEARNING (Kaggle1)"
+Data Engineer,None directly - Data Analyst used as proxy (similar data work),Data Engineer (Kaggle3 exact),"DATA ENGINEER, BIG DATA, ETL (Kaggle1)"
+Cybersecurity Engineer,Cybersecurity Engineer (exact match in Kaggle2),Cybersecurity Analyst (similar role pattern),"SECURITY, CYBER, PENETRATION (Kaggle1)"
+DevOps Engineer,"DevOps Engineer (exact), Kubernetes Operations Engineer (subspecialty)",DevOps Engineer (Kaggle3 exact),"DEVOPS, SITE RELIABILITY, BUILD AND RELEASE (Kaggle1)"
+Cloud Engineer,No direct match - Cloud patterns used from Kaggle3 only,Cloud Engineer (Kaggle3 exact),"CLOUD, AWS, AZURE, GCP (Kaggle1)"
+Android Developer,Mobile Developer (parent role - Android is subspecialty of mobile),Android Developer (Kaggle3 pattern),"ANDROID, MOBILE DEVELOPER (Kaggle1)"
+QA / Test Automation Engineer,No direct match in Kaggle2 - used Kaggle3 JDs only,"QA Engineer, Test Automation Engineer (Kaggle3 patterns)","QA, TEST, QUALITY ASSURANCE, AUTOMATION SPEC (Kaggle1)"

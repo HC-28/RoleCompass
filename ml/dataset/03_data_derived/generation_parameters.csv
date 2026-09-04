@@ -1,0 +1,11 @@
+Target_Role,Noise_Sigma,Overlap_Rate_20pct,Adjacent_Roles,Synthetic_Rows,Real_Rows_from_Kaggle,Total
+Backend Developer,0.06,True,['Full Stack Developer'],350,50,400
+Frontend Developer,0.065,True,['Full Stack Developer'],350,80,430
+Full Stack Developer,0.085,True,"['Backend Developer', 'Frontend Developer']",350,80,430
+Data Scientist,0.06,True,['Data Engineer'],350,75,425
+Data Engineer,0.065,True,['Data Scientist'],350,0,350
+Cybersecurity Engineer,0.06,True,['DevOps Engineer'],350,50,400
+DevOps Engineer,0.075,True,"['Cloud Engineer', 'Cybersecurity Engineer']",350,80,430
+Cloud Engineer,0.075,True,['DevOps Engineer'],350,0,350
+Android Developer,0.06,True,['Frontend Developer'],350,75,425
+QA / Test Automation Engineer,0.06,True,['Backend Developer'],350,0,350

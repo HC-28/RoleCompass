@@ -1,0 +1,32 @@
+Index,Name,Label,Type,Primary_Source,Derivation_Method,Scale
+0,R,Realistic,Psychometric - RIASEC,O*NET DB 31.0 (CC-BY4.0),Weighted avg of matched SOC RIASEC scores divided by 7,0.0-1.0
+1,I,Investigative,Psychometric - RIASEC,O*NET DB 31.0,Weighted avg of matched SOC RIASEC scores divided by 7,0.0-1.0
+2,A,Artistic,Psychometric - RIASEC,O*NET DB 31.0,Weighted avg of matched SOC RIASEC scores divided by 7,0.0-1.0
+3,S,Social,Psychometric - RIASEC,O*NET DB 31.0,Weighted avg of matched SOC RIASEC scores divided by 7,0.0-1.0
+4,E,Enterprising,Psychometric - RIASEC,O*NET DB 31.0,Weighted avg of matched SOC RIASEC scores divided by 7,0.0-1.0
+5,C,Conventional,Psychometric - RIASEC,O*NET DB 31.0,Weighted avg of matched SOC RIASEC scores divided by 7,0.0-1.0
+6,DI,Data-Ideas Axis,Derived Psychometric - Prediger,Computed from O*NET RIASEC,Prediger(1982): (C+E-I-A+12)/24,0.0-1.0
+7,TP,Things-People Axis,Derived Psychometric - Prediger,Computed from O*NET RIASEC,Prediger(1982): (R+C-S-E+12)/24,0.0-1.0
+8,BD,Breadth-Depth,Project Axis,Role definitions + literature,Expert assignment: 1.0=generalist(Full Stack) 0.0=specialist(Data Sci),0.0-1.0
+9,SA,Structure-Ambiguity,Project Axis,Role definitions + literature,Expert assignment: 1.0=high ambiguity(DevOps) 0.0=structured(QA),0.0-1.0
+10,RO,Risk Orientation,Project Axis,Role definitions + literature,Expert assignment: 1.0=offense(pentest) 0.0=defense. 0.5=neutral,0.0-1.0
+11,SERVER,Server,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+12,STORAGE,Storage,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+13,API,Api,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+14,UI,Ui,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+15,STATE,State,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+16,BUILD,Build,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+17,INFRA,Infra,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+18,CONTAINER,Container,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+19,CLOUD,Cloud,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+20,STATS,Stats,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+21,MODEL,Model,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+22,PIPELINE,Pipeline,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+23,MOBILE,Mobile,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+24,THREAT,Threat,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+25,HARDENING,Hardening,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+26,TESTDES,Testdes,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+27,TESTAUTO,Testauto,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+28,OBSERV,Observ,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+29,PERF,Perf,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
+30,FULLSPEC,Fullspec,Technical Skill,SO Survey 2024 + Kaggle calibration,SO DevType usage rate blended with Kaggle JD skill frequency,0.0-1.0
