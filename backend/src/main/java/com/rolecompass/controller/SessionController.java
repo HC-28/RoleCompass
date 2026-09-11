@@ -47,4 +47,12 @@ public class SessionController {
         PredictionResponse response = sessionService.predict(id, user);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/profile")
+    public ResponseEntity<Map<String, Object>> getProfile(
+            @AuthenticationPrincipal User user
+    ) {
+        Map<String, Object> response = sessionService.getProfile(user);
+        return ResponseEntity.ok(response);
+    }
 }

@@ -28,6 +28,14 @@ public class Session {
     @Builder.Default
     private String status = "in_progress";
 
+    /**
+     * Current FSM state. Persisted so every answer submission can resume correctly.
+     * Maps to {@link com.rolecompass.routing.FsmState} enum name.
+     */
+    @Column(name = "fsm_state", nullable = false)
+    @Builder.Default
+    private String fsmState = "SECTION_1_RIASEC";
+
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "candidate_role_ids", columnDefinition = "bigint[]")
     private Long[] candidateRoleIds;
@@ -39,6 +47,12 @@ public class Session {
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "answered_dims_mask", columnDefinition = "boolean[]")
     private Boolean[] answeredDimsMask;
+
+    @Column(name = "predicted_role")
+    private String predictedRole;
+
+    @Column(name = "confidence")
+    private Double confidence;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
