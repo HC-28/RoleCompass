@@ -1,7 +1,13 @@
 package com.rolecompass.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rolecompass.aggregation.FeatureAggregationService;
-import com.rolecompass.dto.*;
+import com.rolecompass.dto.request.AnswerRequest;
+import com.rolecompass.dto.response.PredictionResponse;
+import com.rolecompass.dto.response.PredictionResponse.EliminatedRole;
+import com.rolecompass.dto.response.QuestionDTO;
+import com.rolecompass.dto.response.SessionStartResponse;
 import com.rolecompass.entity.Answer;
 import com.rolecompass.entity.AnswerId;
 import com.rolecompass.entity.Question;
@@ -39,6 +45,8 @@ public class SessionService {
     private final QuestionService questionService;
     private final AdaptiveRoutingEngine routingEngine;
     private final FeatureAggregationService featureAggregationService;
+    private final MlClientService mlClientService;
+    private final ObjectMapper objectMapper;
 
     // ─── Session Start ────────────────────────────────────────────────────────
 
@@ -104,6 +112,14 @@ public class SessionService {
                 .map(a -> a.getId().getQuestionId())
                 .collect(Collectors.toSet());
 
+        // Raw answer map: questionId → Likert value (used for Section 2 adaptive skip)
+        Map<Long, Integer> rawAnswers = allAnswers.stream()
+                .collect(Collectors.toMap(
+                        a -> a.getId().getQuestionId(),
+                        Answer::getLikertValue,
+                        (existing, replacement) -> existing
+                ));
+
         // Update internal feature profiles
         Map<String, Double> psychProfile = featureAggregationService.buildPsychProfile(sessionId);
         double[] techVector = featureAggregationService.buildTechVector(sessionId);
@@ -118,13 +134,13 @@ public class SessionService {
         session.setAnsweredDimsMask(storedMask);
 
         // Build routing state & evaluate next decision
-        RoutingState routingState = buildRoutingState(session, sessionId, totalAnswered, psychProfile, techVector, answeredQuestionIds);
+        RoutingState routingState = buildRoutingState(session, sessionId, totalAnswered, psychProfile, techVector, answeredQuestionIds, rawAnswers);
         RoutingDecision decision = routingEngine.evaluate(routingState);
 
         log.debug("Routing evaluation for {}: readyToPredict={}, survivors={}, nextState={}, nextQuestions={}",
                 sessionId, decision.readyToPredict(), decision.survivingRoles(), decision.nextFsmState(), decision.nextQuestionIds());
 
-        // Update candidate roles and FSM state
+        // Update candidate roles, FSM state, and accumulate elimination log
         Long[] survivorIds = decision.survivingRoles().stream()
                 .map(RoleProfile::idForRoleName)
                 .map(Long::valueOf)
@@ -132,9 +148,20 @@ public class SessionService {
         session.setCandidateRoleIds(survivorIds);
         session.setFsmState(decision.nextFsmState().name());
 
+        // Persist the elimination log accumulated so far into the session
+        // (may be empty if no gate fired yet — that is fine)
+        try {
+            String logJson = objectMapper.writeValueAsString(routingState.eliminationLog());
+            session.setEliminationLogJson(logJson);
+        } catch (Exception e) {
+            log.warn("Could not serialise elimination log for session {}: {}", sessionId, e.getMessage());
+        }
+
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("session_id", sessionId);
         response.put("answers_count", totalAnswered);
+        response.put("fsm_state", decision.nextFsmState().name());
+        response.put("section_number", sectionNumberFor(decision.nextFsmState()));
 
         if (decision.readyToPredict()) {
             session.setStatus("ready_to_predict");
@@ -155,9 +182,6 @@ public class SessionService {
     }
 
     // ─── Prediction Endpoint ──────────────────────────────────────────────────
-
-    @org.springframework.beans.factory.annotation.Value("${ml.service.url:http://localhost:8000}")
-    private String mlServiceUrl;
 
     @Transactional
     public PredictionResponse predict(UUID sessionId, User user) {
@@ -180,14 +204,23 @@ public class SessionService {
 
         PredictionResponse response;
         try {
-            response = callMlService(techVector, candidateRoles);
+            response = mlClientService.score(techVector, candidateRoles);
             log.info("ML service prediction for session {}: role='{}' confidence={}",
                     sessionId, response.getPredictedRole(), response.getConfidence());
         } catch (Exception e) {
             log.warn("ML service unreachable ({}). Using candidate fallback for session {}.",
                     e.getMessage(), sessionId);
-            response = fallbackPrediction(candidateRoles);
+            response = mlClientService.fallback(candidateRoles);
         }
+
+        // Attach the elimination log accumulated during routing gate passes
+        List<EliminatedRole> eliminatedRoles = deserialiseEliminationLog(session);
+        response = PredictionResponse.builder()
+                .predictedRole(response.getPredictedRole())
+                .confidence(response.getConfidence())
+                .alternates(response.getAlternates())
+                .eliminatedRoles(eliminatedRoles)
+                .build();
 
         session.setStatus("completed");
         session.setPredictedRole(response.getPredictedRole());
@@ -199,62 +232,18 @@ public class SessionService {
     }
 
     /**
-     * POSTs the 20-feature vector and candidate_roles to the FastAPI /score endpoint.
+     * Deserialises the elimination log stored on the Session entity.
+     * Returns an empty list if the log is absent, blank, or unparseable.
      */
-    private PredictionResponse callMlService(double[] techVector, List<String> candidateRoles) {
-        org.springframework.web.client.RestTemplate rest = new org.springframework.web.client.RestTemplate();
-
-        // Build request body: { "features": [f0, ..., f19], "candidate_roles": [...] }
-        java.util.Map<String, Object> requestBody = new java.util.LinkedHashMap<>();
-        Double[] features = new Double[techVector.length];
-        for (int i = 0; i < techVector.length; i++) features[i] = techVector[i];
-        requestBody.put("features", features);
-        requestBody.put("candidate_roles", candidateRoles);
-
-        @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> raw = rest.postForObject(
-                mlServiceUrl + "/score", requestBody, java.util.Map.class);
-
-        if (raw == null) throw new RuntimeException("Null response from ML service");
-
-        String predictedRole = (String) raw.get("predicted_role");
-        double confidence = ((Number) raw.get("confidence")).doubleValue();
-
-        @SuppressWarnings("unchecked")
-        List<java.util.Map<String, Object>> rawAlternates =
-                (List<java.util.Map<String, Object>>) raw.get("alternates");
-
-        List<PredictionResponse.AlternateRole> alternates = new ArrayList<>();
-        if (rawAlternates != null) {
-            for (java.util.Map<String, Object> item : rawAlternates) {
-                alternates.add(PredictionResponse.AlternateRole.builder()
-                        .role((String) item.get("role"))
-                        .confidence(((Number) item.get("confidence")).doubleValue())
-                        .build());
-            }
+    private List<EliminatedRole> deserialiseEliminationLog(Session session) {
+        String json = session.getEliminationLogJson();
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<EliminatedRole>>() {});
+        } catch (Exception e) {
+            log.warn("Could not parse elimination log for session {}: {}", session.getId(), e.getMessage());
+            return List.of();
         }
-
-        return PredictionResponse.builder()
-                .predictedRole(predictedRole)
-                .confidence(confidence)
-                .alternates(alternates)
-                .build();
-    }
-
-    private PredictionResponse fallbackPrediction(List<String> candidateRoles) {
-        String role = candidateRoles.isEmpty() ? "Backend Developer" : candidateRoles.get(0);
-        List<PredictionResponse.AlternateRole> alternates = new ArrayList<>();
-        if (candidateRoles.size() > 1) {
-            alternates.add(PredictionResponse.AlternateRole.builder()
-                    .role(candidateRoles.get(1))
-                    .confidence(0.3)
-                    .build());
-        }
-        return PredictionResponse.builder()
-                .predictedRole(role)
-                .confidence(0.5)
-                .alternates(alternates)
-                .build();
     }
 
     @Transactional(readOnly = true)
@@ -330,7 +319,8 @@ public class SessionService {
             int answeredCount,
             Map<String, Double> psychProfile,
             double[] techVector,
-            Set<Long> answeredQuestionIds
+            Set<Long> answeredQuestionIds,
+            Map<Long, Integer> rawAnswers
     ) {
         List<String> candidateNames = Arrays.stream(session.getCandidateRoleIds())
                 .map(id -> RoleProfile.nameForId(id.intValue()))
@@ -345,6 +335,26 @@ public class SessionService {
             }
         }
 
-        return new RoutingState(sessionId, fsmState, candidateNames, psychProfile, techVector, answeredCount, answeredQuestionIds);
+        // Restore the elimination log accumulated from previous gate passes
+        List<EliminatedRole> existingLog = deserialiseEliminationLog(session);
+
+        return new RoutingState(
+                sessionId, fsmState, candidateNames, psychProfile,
+                techVector, answeredCount, answeredQuestionIds, rawAnswers, existingLog);
+    }
+
+    /**
+     * Maps an FSM state to its corresponding section number (1–4) for the API response.
+     * Transient states (PRUNE_*, RESOLVER_EVALUATION) and terminal states return the
+     * section they are transitioning into or have just completed.
+     */
+    private int sectionNumberFor(FsmState state) {
+        return switch (state) {
+            case SECTION_1_RIASEC, PRUNE_PSYCHOMETRICS                  -> 1;
+            case SECTION_2_TECH_CORE, PRUNE_TECH_SKILLS                 -> 2;
+            case SECTION_3_RESOLVER, RESOLVER_EVALUATION                -> 3;
+            case SECTION_4_SPECIALIST                                   -> 4;
+            case TERMINAL_SCORING, COMPLETED                            -> 4;
+        };
     }
 }

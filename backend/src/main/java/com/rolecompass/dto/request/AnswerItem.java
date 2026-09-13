@@ -1,4 +1,4 @@
-package com.rolecompass.dto;
+package com.rolecompass.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Max;
@@ -9,6 +9,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * A single question-answer pair within an {@link AnswerRequest}.
+ *
+ * <p>Constraints are enforced by Jakarta Bean Validation — if the client
+ * omits a field or sends an out-of-range Likert value, Spring returns HTTP 400
+ * automatically without reaching service code.</p>
+ */
 @Data
 @Builder
 @NoArgsConstructor

@@ -7,18 +7,19 @@ package com.rolecompass.routing;
  * <pre>
  * SECTION_1_RIASEC
  *   → PRUNE_PSYCHOMETRICS    (routing engine applies 11-dim threshold elimination)
- *   → SECTION_3_TECH_CORE
+ *   → SECTION_2_TECH_CORE   (40 technical questions; adaptive per-domain Q2 skip rule)
  *   → PRUNE_TECH_SKILLS      (routing engine applies tech floor rules)
  *   → RESOLVER_EVALUATION    (conditional — fires if ≥2 roles tied in candidate set)
- *   → SECTION_2_RESOLVER     (conditional — asks resolver questions when a tie exists)
- *   → SECTION_4_GATED        (conditional — fires if Data Engineer / Backend / Data Scientist survived)
+ *   → SECTION_3_RESOLVER     (conditional — asks resolver questions when a tie exists)
+ *   → SECTION_4_SPECIALIST   (conditional — fires if Data Scientist / Data Engineer /
+ *                              Cybersecurity Engineer / DevOps Engineer survived)
  *   → TERMINAL_SCORING       (sends 20-dim tech vector + candidate_roles to ML service)
  *   → COMPLETED
  * </pre>
  */
 public enum FsmState {
 
-    /** User is answering the 16 Section 1 psychometric/RIASEC questions. */
+    /** User is answering the 16 Section 1 psychometric/RIASEC questions (mandatory). */
     SECTION_1_RIASEC,
 
     /**
@@ -28,11 +29,17 @@ public enum FsmState {
      */
     PRUNE_PSYCHOMETRICS,
 
-    /** User is answering the 20 Section 3 core technical skill questions. */
-    SECTION_3_TECH_CORE,
+    /**
+     * User is answering the up-to-40 Section 2 technical interest questions.
+     * Each of the 20 ML feature domains has 2 questions (Q1 + Q2).
+     * Adaptive skip rule: if a domain's Q1 answer is extreme (≤ 2 or ≥ 4 on
+     * the 1–5 Likert scale), Q2 for that domain is skipped — domain is considered
+     * resolved. Typical path: 22–30 questions answered out of 40 maximum.
+     */
+    SECTION_2_TECH_CORE,
 
     /**
-     * All Section 3 answers collected. Engine applies tech floor rules
+     * All applicable Section 2 answers collected. Engine applies tech floor rules
      * (MOBILE floor, STATS+MODEL floor, THREAT+HARDENING floor).
      * Transient computation state.
      */
@@ -40,21 +47,23 @@ public enum FsmState {
 
     /**
      * Engine evaluates whether a tie exists in the candidate set.
-     * Transient — resolves to SECTION_2_RESOLVER or SECTION_4_GATED.
+     * Transient — resolves to SECTION_3_RESOLVER or SECTION_4_SPECIALIST.
      */
     RESOLVER_EVALUATION,
 
     /**
-     * A tie was detected. User is answering the relevant Section 2
-     * resolver question(s) selected by trigger predicate matching.
+     * A tie was detected between two similar roles. User is answering the relevant
+     * Section 3 pair-discriminator question(s) selected by requires_both predicate matching.
+     * Maximum 12 questions (6 pairs × 2), typically 2–4.
      */
-    SECTION_2_RESOLVER,
+    SECTION_3_RESOLVER,
 
     /**
-     * Data Engineer, Backend Developer, or Data Scientist survived.
-     * User is answering Section 4 database deep-dive questions.
+     * A specialist role (Data Scientist, Data Engineer, Cybersecurity Engineer,
+     * or DevOps Engineer) survived pruning. User is answering the 4 dedicated
+     * Section 4 probe questions for that role. Maximum 16 questions (4 roles × 4).
      */
-    SECTION_4_GATED,
+    SECTION_4_SPECIALIST,
 
     /**
      * All question collection is complete. The 20-dim tech vector and

@@ -1,9 +1,9 @@
 package com.rolecompass.api;
 
-import com.rolecompass.dto.AnswerItem;
-import com.rolecompass.dto.AnswerRequest;
-import com.rolecompass.dto.LoginRequest;
-import com.rolecompass.dto.RegisterRequest;
+import com.rolecompass.dto.request.AnswerItem;
+import com.rolecompass.dto.request.AnswerRequest;
+import com.rolecompass.dto.request.LoginRequest;
+import com.rolecompass.dto.request.RegisterRequest;
 import com.rolecompass.entity.User;
 import com.rolecompass.repository.AnswerRepository;
 import com.rolecompass.repository.QuestionRepository;
@@ -51,7 +51,7 @@ class ApiServiceRegressionTest {
     @Test
     @DisplayName("Register contract produces expected token response structure")
     void register_contract_matches() {
-        RegisterRequest request = new RegisterRequest("test@rolecompass.com", "password123");
+        RegisterRequest request = new RegisterRequest("test@rolecompass.com", "password123", null);
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedHash");

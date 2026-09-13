@@ -1,5 +1,6 @@
 package com.rolecompass.routing;
 
+import com.rolecompass.dto.response.PredictionResponse.EliminatedRole;
 import java.util.*;
 
 /**
@@ -43,7 +44,24 @@ public record RoutingState(
         /**
          * Set of question IDs already answered in this session.
          */
-        Set<Long> answeredQuestionIds
+        Set<Long> answeredQuestionIds,
+
+        /**
+         * Raw Likert values keyed by question ID.
+         * Used exclusively by the Section 2 adaptive skip rule:
+         * if a domain's Q1 answer is extreme (≤ 2 or ≥ 4), Q2 is skipped.
+         * Values are in [1, 5] (1=Strongly Disagree … 5=Strongly Agree).
+         */
+        Map<Long, Integer> rawAnswers,
+
+        /**
+         * Accumulated elimination log built up as the FSM passes through
+         * PRUNE_PSYCHOMETRICS and PRUNE_TECH_SKILLS gates.
+         * Entries are plain-English EliminatedRole records that will be
+         * included in the final PredictionResponse.
+         */
+        List<EliminatedRole> eliminationLog
+
 ) {
     /** All 10 role names in canonical order (matches AGENTS.md). */
     public static final List<String> ALL_ROLES = List.of(
@@ -86,7 +104,9 @@ public record RoutingState(
                 neutralPsych,
                 neutralTech,
                 0,
-                new HashSet<>()
+                new HashSet<>(),
+                new HashMap<>(),
+                new ArrayList<>()
         );
     }
 
@@ -99,9 +119,10 @@ public record RoutingState(
     }
 
     /**
-     * How many Section 3 questions have been answered by this session.
+     * How many Section 2 tech questions have been answered by this session.
+     * The adaptive skip rule means this may be less than 40 even when Section 2 is complete.
      */
-    public int section3AnsweredCount() {
+    public int section2AnsweredCount() {
         return answeredCount; // placeholder — SessionService provides precise count per section
     }
 
@@ -114,7 +135,23 @@ public record RoutingState(
     public RoutingState withFsmStateAndCandidates(FsmState newFsm, List<String> newCandidates) {
         return new RoutingState(
                 sessionId, newFsm, new ArrayList<>(newCandidates),
-                psychProfile, techVector, answeredCount, answeredQuestionIds
+                psychProfile, techVector, answeredCount, answeredQuestionIds,
+                rawAnswers, new ArrayList<>(eliminationLog)
+        );
+    }
+
+    /**
+     * Returns a new RoutingState with the provided elimination entries appended
+     * to the existing log. Used by the FSM when a gate fires to accumulate
+     * all elimination records across multiple gate passes.
+     */
+    public RoutingState withEliminationLog(List<EliminatedRole> newEntries) {
+        List<EliminatedRole> merged = new ArrayList<>(eliminationLog);
+        merged.addAll(newEntries);
+        return new RoutingState(
+                sessionId, fsmState, new ArrayList<>(candidateRoles),
+                psychProfile, techVector, answeredCount, answeredQuestionIds,
+                rawAnswers, merged
         );
     }
 }

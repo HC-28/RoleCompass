@@ -54,6 +54,14 @@ public class Session {
     @Column(name = "confidence")
     private Double confidence;
 
+    /**
+     * JSON array of EliminatedRole records accumulated during routing gate passes.
+     * Serialised/deserialised by SessionService using Jackson ObjectMapper.
+     * Example: [{"role":"Data Scientist","stage":"PSYCHOMETRIC","reason":"..."}]
+     */
+    @Column(name = "elimination_log_json", columnDefinition = "TEXT")
+    private String eliminationLogJson;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

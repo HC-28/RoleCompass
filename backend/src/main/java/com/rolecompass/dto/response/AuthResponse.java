@@ -1,4 +1,4 @@
-package com.rolecompass.dto;
+package com.rolecompass.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -8,6 +8,12 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
+/**
+ * Response body for {@code POST /api/auth/register} and {@code POST /api/auth/login}.
+ *
+ * <p>The token is a signed JWT. Clients must include it as
+ * {@code Authorization: Bearer <token>} on all authenticated endpoints.</p>
+ */
 @Data
 @Builder
 @NoArgsConstructor

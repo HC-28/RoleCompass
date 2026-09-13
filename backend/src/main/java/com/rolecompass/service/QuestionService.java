@@ -1,8 +1,9 @@
 package com.rolecompass.service;
 
-import com.rolecompass.dto.QuestionDTO;
+import com.rolecompass.dto.response.QuestionDTO;
 import com.rolecompass.entity.Question;
 import com.rolecompass.repository.QuestionRepository;
+import com.rolecompass.routing.SectionMetadata;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,10 +13,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * QuestionService — handles retrieval and transformation of Question entities into client-facing QuestionDTOs.
+ * QuestionService — retrieval and transformation of Question entities into
+ * client-facing {@link QuestionDTO}s.
  *
- * <p><strong>Dumb Client Rule:</strong> Dimension tags, trigger predicates, and internal metadata
- * are stripped during transformation and never returned to the frontend.</p>
+ * <p><strong>Dumb-Client Rule:</strong> Dimension tags and trigger predicates
+ * are stripped during transformation. Only text, options, and section-context
+ * metadata are returned to the frontend.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -57,11 +60,25 @@ public class QuestionService {
                 .collect(Collectors.toList());
     }
 
+    // ─── DTO Assembly ─────────────────────────────────────────────────────────
+
+    /**
+     * Converts a Question entity to a client-facing DTO, injecting section and
+     * subsection labels from {@link SectionMetadata}. Internal tags are excluded.
+     */
     private QuestionDTO toDTO(Question q) {
+        int sectionId = q.getSectionId();
+        String primaryTag = (q.getDimensionTags() != null && q.getDimensionTags().length > 0)
+                ? q.getDimensionTags()[0]
+                : null;
+
         return QuestionDTO.builder()
                 .id(q.getId())
                 .text(q.getText())
                 .options(List.of(1, 2, 3, 4, 5))
+                .sectionNumber(sectionId)
+                .sectionLabel(SectionMetadata.SECTION_LABELS.get(sectionId))
+                .subsectionLabel(SectionMetadata.resolveSubsectionLabel(sectionId, primaryTag))
                 .build();
     }
 }

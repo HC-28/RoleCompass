@@ -36,15 +36,16 @@ class AdaptiveRoutingEngineTest {
 
         Question q1 = Question.builder().id(101L).sectionId(1).text("S1 Q1").triggerPredicate("{\"always\": true}").build();
         Question q2 = Question.builder().id(102L).sectionId(1).text("S1 Q2").triggerPredicate("{\"always\": true}").build();
-        Question q3 = Question.builder().id(301L).sectionId(3).text("S3 Q1").triggerPredicate("{\"always\": true}").build();
-        Question q4 = Question.builder().id(201L).sectionId(2).text("S2 Resolver")
+        Question q3 = Question.builder().id(201L).sectionId(2).text("S2 Tech Core")
+                .dimensionTags(new String[]{"TECH_SERVER"}).triggerPredicate("{\"always\": true}").build();
+        Question q4 = Question.builder().id(301L).sectionId(3).text("S3 Resolver")
                 .triggerPredicate("{\"requires_both\": [\"DevOps Engineer\", \"Cloud Engineer\"]}").build();
-        Question q5 = Question.builder().id(401L).sectionId(4).text("S4 Gated")
+        Question q5 = Question.builder().id(401L).sectionId(4).text("S4 Specialist")
                 .triggerPredicate("{\"requires_any\": [\"Data Engineer\", \"Backend Developer\", \"Data Scientist\"]}").build();
 
         lenient().when(questionRepository.findBySectionIdOrderByIdAsc(1)).thenReturn(List.of(q1, q2));
-        lenient().when(questionRepository.findBySectionIdOrderByIdAsc(2)).thenReturn(List.of(q4));
-        lenient().when(questionRepository.findBySectionIdOrderByIdAsc(3)).thenReturn(List.of(q3));
+        lenient().when(questionRepository.findBySectionIdOrderByIdAsc(2)).thenReturn(List.of(q3));
+        lenient().when(questionRepository.findBySectionIdOrderByIdAsc(3)).thenReturn(List.of(q4));
         lenient().when(questionRepository.findBySectionIdOrderByIdAsc(4)).thenReturn(List.of(q5));
     }
 
@@ -56,7 +57,9 @@ class AdaptiveRoutingEngineTest {
                 psych,
                 tech != null ? tech : new double[20],
                 answered != null ? answered.size() : 0,
-                answered != null ? answered : Set.of()
+                answered != null ? answered : Set.of(),
+                Map.of(),
+                new java.util.ArrayList<>()   // eliminationLog — empty for unit tests
         );
     }
 
@@ -90,9 +93,9 @@ class AdaptiveRoutingEngineTest {
         RoutingState state = stateWith(FsmState.SECTION_1_RIASEC, RoutingState.ALL_ROLES, Map.of(), null, Set.of(101L, 102L));
         RoutingDecision decision = engine.evaluate(state);
 
-        // Advances through PRUNE_PSYCHOMETRICS into SECTION_3_TECH_CORE
-        assertThat(decision.nextFsmState()).isEqualTo(FsmState.SECTION_3_TECH_CORE);
-        assertThat(decision.nextQuestionIds()).contains(301L);
+        // Advances through PRUNE_PSYCHOMETRICS into SECTION_2_TECH_CORE
+        assertThat(decision.nextFsmState()).isEqualTo(FsmState.SECTION_2_TECH_CORE);
+        assertThat(decision.nextQuestionIds()).contains(201L);
     }
 
     // ─── Discrete RIASEC Elimination Gates ────────────────────────────────────
@@ -107,10 +110,13 @@ class AdaptiveRoutingEngineTest {
         psych.put(FeatureIndex.TAG_DIM_CONVENTIONAL, 0.80);
 
         RoutingState state = stateWith(FsmState.PRUNE_PSYCHOMETRICS, new ArrayList<>(RoutingState.ALL_ROLES), psych, null, Set.of());
-        List<String> survivors = engine.applyPsychometricGates(state);
+        AdaptiveRoutingEngine.GateResult result = engine.applyPsychometricGates(state);
 
-        assertThat(survivors).doesNotContain("Frontend Developer");
-        assertThat(survivors).contains("Backend Developer");
+        assertThat(result.survivors()).doesNotContain("Frontend Developer");
+        assertThat(result.survivors()).contains("Backend Developer");
+        // Elimination log should record why Frontend Developer was ruled out
+        assertThat(result.log()).anyMatch(e -> e.getRole().equals("Frontend Developer"));
+        assertThat(result.log()).anyMatch(e -> "PSYCHOMETRIC".equals(e.getStage()));
     }
 
     @Test
@@ -123,9 +129,10 @@ class AdaptiveRoutingEngineTest {
         psych.put(FeatureIndex.TAG_DIM_CONVENTIONAL, 0.80);
 
         RoutingState state = stateWith(FsmState.PRUNE_PSYCHOMETRICS, new ArrayList<>(RoutingState.ALL_ROLES), psych, null, Set.of());
-        List<String> survivors = engine.applyPsychometricGates(state);
+        AdaptiveRoutingEngine.GateResult result = engine.applyPsychometricGates(state);
 
-        assertThat(survivors).doesNotContain("Data Scientist");
+        assertThat(result.survivors()).doesNotContain("Data Scientist");
+        assertThat(result.log()).anyMatch(e -> e.getRole().equals("Data Scientist"));
     }
 
     @Test
@@ -138,9 +145,12 @@ class AdaptiveRoutingEngineTest {
         psych.put(FeatureIndex.TAG_DIM_CONVENTIONAL, 0.80);
 
         RoutingState state = stateWith(FsmState.PRUNE_PSYCHOMETRICS, new ArrayList<>(RoutingState.ALL_ROLES), psych, null, Set.of());
-        List<String> survivors = engine.applyPsychometricGates(state);
+        AdaptiveRoutingEngine.GateResult result = engine.applyPsychometricGates(state);
 
-        assertThat(survivors).doesNotContain("DevOps Engineer", "Cloud Engineer");
+        assertThat(result.survivors()).doesNotContain("DevOps Engineer", "Cloud Engineer");
+        // Both DevOps and Cloud should appear in the elimination log
+        assertThat(result.log().stream().map(e -> e.getRole()).toList())
+            .containsExactlyInAnyOrder("DevOps Engineer", "Cloud Engineer");
     }
 
     @Test
@@ -154,9 +164,9 @@ class AdaptiveRoutingEngineTest {
         extremePsych.put(FeatureIndex.TAG_DIM_CONVENTIONAL, 0.10);
 
         RoutingState state = stateWith(FsmState.PRUNE_PSYCHOMETRICS, new ArrayList<>(RoutingState.ALL_ROLES), extremePsych, null, Set.of());
-        List<String> survivors = engine.applyPsychometricGates(state);
+        AdaptiveRoutingEngine.GateResult result = engine.applyPsychometricGates(state);
 
-        assertThat(survivors.size()).isGreaterThanOrEqualTo(AdaptiveRoutingEngine.MIN_CANDIDATES);
+        assertThat(result.survivors().size()).isGreaterThanOrEqualTo(AdaptiveRoutingEngine.MIN_CANDIDATES);
     }
 
     // ─── Tech Floor Gates ─────────────────────────────────────────────────────
@@ -169,9 +179,11 @@ class AdaptiveRoutingEngineTest {
         tech[12] = 0.20; // MOBILE feature at index 12 < 0.40
 
         RoutingState state = stateWith(FsmState.PRUNE_TECH_SKILLS, new ArrayList<>(RoutingState.ALL_ROLES), Map.of(), tech, Set.of());
-        List<String> survivors = engine.applyTechFloorGates(state);
+        AdaptiveRoutingEngine.GateResult result = engine.applyTechFloorGates(state);
 
-        assertThat(survivors).doesNotContain("Android Developer");
+        assertThat(result.survivors()).doesNotContain("Android Developer");
+        assertThat(result.log()).anyMatch(e -> e.getRole().equals("Android Developer"));
+        assertThat(result.log()).anyMatch(e -> "TECHNICAL".equals(e.getStage()));
     }
 
     // ─── Trigger Predicate Evaluation ─────────────────────────────────────────

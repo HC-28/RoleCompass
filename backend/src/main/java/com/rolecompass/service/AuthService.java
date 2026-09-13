@@ -1,8 +1,8 @@
 package com.rolecompass.service;
 
-import com.rolecompass.dto.AuthResponse;
-import com.rolecompass.dto.LoginRequest;
-import com.rolecompass.dto.RegisterRequest;
+import com.rolecompass.dto.response.AuthResponse;
+import com.rolecompass.dto.request.LoginRequest;
+import com.rolecompass.dto.request.RegisterRequest;
 import com.rolecompass.entity.User;
 import com.rolecompass.exception.ApiException;
 import com.rolecompass.repository.UserRepository;

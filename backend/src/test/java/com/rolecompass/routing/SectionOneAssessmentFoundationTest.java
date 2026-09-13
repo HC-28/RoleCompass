@@ -2,10 +2,10 @@ package com.rolecompass.routing;
 
 import com.rolecompass.aggregation.FeatureAggregationService;
 import com.rolecompass.aggregation.FeatureIndex;
-import com.rolecompass.dto.AnswerItem;
-import com.rolecompass.dto.AnswerRequest;
-import com.rolecompass.dto.QuestionDTO;
-import com.rolecompass.dto.SessionStartResponse;
+import com.rolecompass.dto.request.AnswerItem;
+import com.rolecompass.dto.request.AnswerRequest;
+import com.rolecompass.dto.response.QuestionDTO;
+import com.rolecompass.dto.response.SessionStartResponse;
 import com.rolecompass.entity.Answer;
 import com.rolecompass.entity.AnswerId;
 import com.rolecompass.entity.Question;
@@ -15,6 +15,7 @@ import com.rolecompass.repository.AnswerRepository;
 import com.rolecompass.repository.QuestionRepository;
 import com.rolecompass.repository.SessionRepository;
 import com.rolecompass.seed.DataSeeder;
+import com.rolecompass.service.MlClientService;
 import com.rolecompass.service.QuestionService;
 import com.rolecompass.service.SessionService;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import org.mockito.quality.Strictness;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,6 +54,7 @@ class SectionOneAssessmentFoundationTest {
     private AdaptiveRoutingEngine routingEngine;
     private FeatureAggregationService aggregationService;
     private SessionService sessionService;
+    private MlClientService mlClientService = new MlClientService();
 
     @BeforeEach
     void setUp() {
@@ -77,7 +80,9 @@ class SectionOneAssessmentFoundationTest {
                 questionRepository,
                 questionService,
                 routingEngine,
-                aggregationService
+                aggregationService,
+                mlClientService,
+                new ObjectMapper()
         );
     }
 
