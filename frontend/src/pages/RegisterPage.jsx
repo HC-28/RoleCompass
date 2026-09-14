@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { register } from '../api/auth'
-import AuthCard from '../components/AuthCard'
+import AuthCard from '../components/auth/AuthCard'
 import Layout from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
 import {

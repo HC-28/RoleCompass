@@ -3,25 +3,64 @@ import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { predict, startSession, submitAnswers } from '../api/session'
 import Layout from '../components/Layout'
-import LikertScale from '../components/LikertScale'
+import LikertScale from '../components/assessment/LikertScale'
+import SectionBanner from '../components/assessment/SectionBanner'
+import { ASSESSMENT_BASELINE_TOTAL } from '../constants/assessment.constants'
 import { extractErrorMessage } from '../utils/validation'
 
 const RESULTS_KEY = 'rolecompass_results'
 
+/**
+ * AssessmentPage
+ *
+ * Orchestrates the full 4-section assessment flow:
+ *   - Section 1 (4 questions per batch)
+ *   - Section 2 (1 question per API call — adaptive skip fires between each question)
+ *   - Section 3 (batch delivery, conditional)
+ *   - Section 4 (batch delivery, conditional)
+ *
+ * Key invariant: `totalAnswered` always reflects cumulative questions answered
+ * across all submitted batches. `currentIndex` is the 0-based position within
+ * the current in-memory batch. The displayed question number is always:
+ *
+ *   totalAnswered + currentIndex + 1
+ *
+ * This is correct even when Section 2 delivers 1 question at a time (batchSize=1,
+ * so currentIndex is always 0 during Section 2).
+ */
 export default function AssessmentPage() {
   const navigate = useNavigate()
 
   // 'idle' | 'loading' | 'active' | 'error'
-  // A session is only created when the user explicitly clicks "Begin Assessment".
-  // This prevents ghost empty sessions from appearing in history every time the
-  // user navigates to this page (e.g. via the "Take New Assessment" link).
   const [phase, setPhase] = useState('idle')
   const [sessionId, setSessionId] = useState(null)
-  const [questions, setQuestions] = useState([])
+  const [questions, setQuestions] = useState([])       // current in-memory batch
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [answers, setAnswers] = useState({})
+  const [answers, setAnswers] = useState({})           // answers for current batch only
+  const [totalAnswered, setTotalAnswered] = useState(0)// cumulative answered
+  const [fsmState, setFsmState] = useState('SECTION_1_RIASEC')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
+
+  // ─── Derived state ─────────────────────────────────────────────────────────
+
+  const currentQuestion = questions[currentIndex]
+  const selectedValue   = currentQuestion ? (answers[currentQuestion.id] ?? null) : null
+  const isLastInBatch   = currentIndex === questions.length - 1
+
+  // Cumulative question number shown to the user (never resets)
+  const questionNumber = totalAnswered + currentIndex + 1
+  const progress = Math.min((questionNumber / ASSESSMENT_BASELINE_TOTAL) * 100, 100)
+
+  const canProceed = useMemo(
+    () => selectedValue !== null && !isSubmitting,
+    [selectedValue, isSubmitting],
+  )
+
+  // Subsection label comes from the current question (Section 2 only)
+  const subsectionLabel = currentQuestion?.subsection_label ?? null
+
+  // ─── Session Start ──────────────────────────────────────────────────────────
 
   const handleBegin = async () => {
     setPhase('loading')
@@ -30,6 +69,10 @@ export default function AssessmentPage() {
       const response = await startSession()
       setSessionId(response.session_id)
       setQuestions(response.questions || [])
+      setTotalAnswered(0)
+      setCurrentIndex(0)
+      setAnswers({})
+      setFsmState('SECTION_1_RIASEC')
       setPhase('active')
     } catch (err) {
       setError(extractErrorMessage(err, 'Unable to start assessment. Please try again.'))
@@ -37,37 +80,30 @@ export default function AssessmentPage() {
     }
   }
 
-  const currentQuestion = questions[currentIndex]
-  const selectedValue = currentQuestion ? (answers[currentQuestion.id] ?? null) : null
-  const isLastQuestion = currentIndex === questions.length - 1
-  const progress = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0
-
-  const canProceed = useMemo(
-    () => selectedValue !== null && !isSubmitting,
-    [selectedValue, isSubmitting],
-  )
+  // ─── Within-batch navigation ───────────────────────────────────────────────
 
   const handleSelect = useCallback(
     (value) => {
-      if (!currentQuestion) {
-        return
-      }
+      if (!currentQuestion) return
       setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }))
     },
     [currentQuestion],
   )
 
   const handleNext = () => {
-    if (!canProceed || isLastQuestion) {
-      return
-    }
+    if (!canProceed || isLastInBatch) return
     setCurrentIndex((prev) => prev + 1)
   }
 
+  // ─── Batch submission & next delivery ─────────────────────────────────────
+
+  /**
+   * Submits all answered questions in the current batch and loads the next one.
+   * For Section 2 the "batch" is a single question, so this fires after every answer.
+   * For Sections 1, 3, 4 it fires after the last question in the 4-question batch.
+   */
   const handleSubmit = async () => {
-    if (!canProceed || !sessionId || !isLastQuestion) {
-      return
-    }
+    if (!canProceed || !sessionId || !isLastInBatch) return
 
     setIsSubmitting(true)
     setError(null)
@@ -82,22 +118,31 @@ export default function AssessmentPage() {
 
       const response = await submitAnswers(sessionId, payload)
 
+      // Update FSM state from response so SectionBanner reflects the transition
+      if (response.fsm_state) {
+        setFsmState(response.fsm_state)
+      }
+
       if (response.status === 'ready_to_predict') {
         const results = await predict(sessionId)
         sessionStorage.setItem(RESULTS_KEY, JSON.stringify(results))
         navigate('/results', { state: { results } })
       } else if (response.questions && response.questions.length > 0) {
+        // Advance cumulative counter BEFORE resetting currentIndex
+        setTotalAnswered((prev) => prev + questions.length)
         setQuestions(response.questions)
+        setAnswers({})
         setCurrentIndex(0)
       }
     } catch (err) {
-      setError(extractErrorMessage(err, 'Unable to submit assessment. Please try again.'))
+      setError(extractErrorMessage(err, 'Unable to submit answers. Please try again.'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  // ── Phase: Idle — landing / confirmation card ──────────────────────────────
+  // ─── Phase: Idle ────────────────────────────────────────────────────────────
+
   if (phase === 'idle') {
     return (
       <Layout>
@@ -110,10 +155,19 @@ export default function AssessmentPage() {
               Career Role Assessment
             </h2>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              Answer a series of questions about your interests and skills. The system will
-              adaptively route you to the most relevant questions and predict your best-fit IT
-              role.
+              Answer a series of questions about your interests and thinking style. The engine
+              adapts in real time, skipping questions where your signal is already clear.
             </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-400 max-w-xs mx-auto">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="font-bold text-slate-800 dark:text-white">4 Sections</div>
+              <div>Personality → Technical → Role Fit → Specialist</div>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="font-bold text-slate-800 dark:text-white">Adaptive</div>
+              <div>44–84 questions based on your answers</div>
+            </div>
           </div>
           <button
             type="button"
@@ -128,7 +182,8 @@ export default function AssessmentPage() {
     )
   }
 
-  // ── Phase: Loading ─────────────────────────────────────────────────────────
+  // ─── Phase: Loading ──────────────────────────────────────────────────────────
+
   if (phase === 'loading') {
     return (
       <Layout>
@@ -147,7 +202,8 @@ export default function AssessmentPage() {
     )
   }
 
-  // ── Phase: Error ───────────────────────────────────────────────────────────
+  // ─── Phase: Error ────────────────────────────────────────────────────────────
+
   if (phase === 'error') {
     return (
       <Layout>
@@ -169,16 +225,21 @@ export default function AssessmentPage() {
     )
   }
 
-  // ── Phase: Active — the question flow ─────────────────────────────────────
+  // ─── Phase: Active ───────────────────────────────────────────────────────────
+
   return (
     <Layout>
       <div className="mx-auto w-full max-w-3xl">
-        {/* Progress bar and counter */}
+
+        {/* Section Banner */}
+        <SectionBanner fsmState={fsmState} subsectionLabel={subsectionLabel} />
+
+        {/* Progress bar and cumulative counter */}
         <div className="mb-6">
           <div className="mb-2 flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-1.5">
               <span className="flex h-2 w-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />
-              Question {currentIndex + 1} of {questions.length}
+              Question {questionNumber} of ~{ASSESSMENT_BASELINE_TOTAL}
             </span>
             <span>{Math.round(progress)}% Completed</span>
           </div>
@@ -196,7 +257,7 @@ export default function AssessmentPage() {
           <div className="border-b border-slate-200/80 px-6 py-6 sm:px-8 sm:py-7 dark:border-slate-800/80">
             <div className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
               <Sparkles className="h-3 w-3" />
-              Evaluation Question {currentIndex + 1}
+              Question {questionNumber}
             </div>
             <h1 className="mt-3 text-lg font-semibold leading-snug text-slate-900 sm:text-xl dark:text-white">
               {currentQuestion?.text}
@@ -237,7 +298,7 @@ export default function AssessmentPage() {
               </button>
 
               <div>
-                {!isLastQuestion ? (
+                {!isLastInBatch ? (
                   <button
                     type="button"
                     disabled={!canProceed}
@@ -257,7 +318,7 @@ export default function AssessmentPage() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Processing Answers…
+                        Processing…
                       </>
                     ) : (
                       <>
