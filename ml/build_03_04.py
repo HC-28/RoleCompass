@@ -1,7 +1,9 @@
 import os, pandas as pd, numpy as np, json
 
-BASE   = r'g:\Users\HP\RoleCompass\ml\dataset'
-KAGGLE = r'g:\Users\HP\RoleCompass\dataset'
+# Paths derived from this script’s location — works on any machine.
+_HERE  = os.path.dirname(os.path.abspath(__file__))
+BASE   = os.path.join(_HERE, "dataset")
+KAGGLE = os.path.join(os.path.dirname(_HERE), "dataset")
 
 RIASEC_RAW = {
     '15-1252.00':{'R':3.61,'I':6.05,'A':2.37,'S':1.81,'E':1.87,'C':5.62},
@@ -45,16 +47,16 @@ SO_TECH = {
     'QA / Test Automation Engineer':[0.35,0.40,0.40,0.25,0.25,0.45,0.20,0.20,0.20,0.25,0.15,0.25,0.10,0.30,0.30,0.95,0.95,0.40,0.55,0.20],
 }
 PROJECT_SPECIFIC = {
-    'Backend Developer':{'BD':0.35,'SA':0.40,'RO':0.50},
-    'Frontend Developer':{'BD':0.40,'SA':0.55,'RO':0.50},
-    'Full Stack Developer':{'BD':0.80,'SA':0.60,'RO':0.50},
-    'Data Scientist':{'BD':0.30,'SA':0.45,'RO':0.50},
-    'Data Engineer':{'BD':0.45,'SA':0.55,'RO':0.50},
-    'Cybersecurity Engineer':{'BD':0.55,'SA':0.60,'RO':0.50},
-    'DevOps Engineer':{'BD':0.70,'SA':0.75,'RO':0.50},
-    'Cloud Engineer':{'BD':0.65,'SA':0.70,'RO':0.50},
-    'Android Developer':{'BD':0.45,'SA':0.50,'RO':0.50},
-    'QA / Test Automation Engineer':{'BD':0.50,'SA':0.25,'RO':0.50},
+    'Backend Developer':{'BD':0.35,'SA':0.40,'RO':0.35},
+    'Frontend Developer':{'BD':0.40,'SA':0.55,'RO':0.25},
+    'Full Stack Developer':{'BD':0.80,'SA':0.60,'RO':0.30},
+    'Data Scientist':{'BD':0.30,'SA':0.45,'RO':0.20},
+    'Data Engineer':{'BD':0.45,'SA':0.55,'RO':0.30},
+    'Cybersecurity Engineer':{'BD':0.55,'SA':0.60,'RO':0.85},
+    'DevOps Engineer':{'BD':0.70,'SA':0.75,'RO':0.55},
+    'Cloud Engineer':{'BD':0.65,'SA':0.70,'RO':0.45},
+    'Android Developer':{'BD':0.45,'SA':0.50,'RO':0.25},
+    'QA / Test Automation Engineer':{'BD':0.50,'SA':0.25,'RO':0.70},
 }
 SKILL_TO_FEATURE = {
     'Python':['STATS','MODEL','PIPELINE'],'Java':['SERVER','API'],'SQL':['STORAGE'],

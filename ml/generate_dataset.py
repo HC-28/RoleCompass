@@ -1,4 +1,4 @@
-﻿"""
+"""
 RoleCompass — Grounded Synthetic Dataset Generator
 ====================================================
 DATA SOURCES (all pulled live from official URLs):
@@ -76,16 +76,17 @@ print("STEP 2: PROJECT-SPECIFIC AXES + TECH WEIGHTS (SO Survey 2024)")
 print("="*70)
 
 PROJECT_SPECIFIC = {
-    'Backend Developer':            {'BD':0.35,'SA':0.40,'RO':0.50},
-    'Frontend Developer':           {'BD':0.40,'SA':0.55,'RO':0.50},
-    'Full Stack Developer':         {'BD':0.80,'SA':0.60,'RO':0.50},
-    'Data Scientist':               {'BD':0.30,'SA':0.45,'RO':0.50},
-    'Data Engineer':                {'BD':0.45,'SA':0.55,'RO':0.50},
-    'Cybersecurity Engineer':       {'BD':0.55,'SA':0.60,'RO':0.50},
-    'DevOps Engineer':              {'BD':0.70,'SA':0.75,'RO':0.50},
-    'Cloud Engineer':               {'BD':0.65,'SA':0.70,'RO':0.50},
-    'Android Developer':            {'BD':0.45,'SA':0.50,'RO':0.50},
-    'QA / Test Automation Engineer':{'BD':0.50,'SA':0.25,'RO':0.50},
+    # BD = Breadth-Depth, SA = Structure-Ambiguity, RO = Risk/Offense Orientation
+    'Backend Developer':            {'BD':0.35,'SA':0.40,'RO':0.35},
+    'Frontend Developer':           {'BD':0.40,'SA':0.55,'RO':0.25},
+    'Full Stack Developer':         {'BD':0.80,'SA':0.60,'RO':0.30},
+    'Data Scientist':               {'BD':0.30,'SA':0.45,'RO':0.20},
+    'Data Engineer':                {'BD':0.45,'SA':0.55,'RO':0.30},
+    'Cybersecurity Engineer':       {'BD':0.55,'SA':0.60,'RO':0.85},
+    'DevOps Engineer':              {'BD':0.70,'SA':0.75,'RO':0.55},
+    'Cloud Engineer':               {'BD':0.65,'SA':0.70,'RO':0.45},
+    'Android Developer':            {'BD':0.45,'SA':0.50,'RO':0.25},
+    'QA / Test Automation Engineer':{'BD':0.50,'SA':0.25,'RO':0.70},
 }
 
 # SO Dev Survey 2024 tech usage -> relative weight per role

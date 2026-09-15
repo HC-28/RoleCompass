@@ -1,4 +1,4 @@
-﻿import pandas as pd
+import pandas as pd
 import numpy as np
 import os
 import json
@@ -9,8 +9,17 @@ import sys
 import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-BASE    = r"g:\Users\HP\RoleCompass\ml\dataset"
-KAGGLE  = r"g:\Users\HP\RoleCompass\dataset"
+# Paths derived from this script's location — works on any machine.
+# build_datasets.py lives in:  <project>/ml/
+# ml/dataset lives in:         <project>/ml/dataset/
+# root dataset lives in:       <project>/dataset/
+_HERE   = os.path.dirname(os.path.abspath(__file__))
+BASE    = os.path.join(_HERE, "dataset")
+KAGGLE  = os.path.join(os.path.dirname(_HERE), "dataset")
+
+if not os.path.isdir(KAGGLE):
+    print(f"[WARN] Kaggle dataset directory not found: {KAGGLE}")
+    print("       Download the three Kaggle CSV files into that folder before running.")
 
 ONET_RAW = {
     "15-1252": {"R":3.61,"I":6.05,"A":2.37,"S":1.81,"E":1.87,"C":5.62, "title":"Software Developers"},
@@ -50,16 +59,19 @@ TECH_WEIGHTS = {
 }
 
 PROJECT_SPECIFIC = {
-    "Backend Developer":            {"BD":0.35,"SA":0.40,"RO":0.50},
-    "Frontend Developer":           {"BD":0.40,"SA":0.55,"RO":0.50},
-    "Full Stack Developer":         {"BD":0.80,"SA":0.60,"RO":0.50},
-    "Data Scientist":               {"BD":0.30,"SA":0.45,"RO":0.50},
-    "Data Engineer":                {"BD":0.45,"SA":0.55,"RO":0.50},
-    "Cybersecurity Engineer":       {"BD":0.55,"SA":0.60,"RO":0.50},
-    "DevOps Engineer":              {"BD":0.70,"SA":0.75,"RO":0.50},
-    "Cloud Engineer":               {"BD":0.65,"SA":0.70,"RO":0.50},
-    "Android Developer":            {"BD":0.45,"SA":0.50,"RO":0.50},
-    "QA / Test Automation Engineer":{"BD":0.50,"SA":0.25,"RO":0.50},
+    # BD = Breadth-Depth (0=deep specialist, 1=broad generalist)
+    # SA = Structure-Ambiguity (0=loves structure, 1=loves ambiguity)
+    # RO = Risk/Offense Orientation (0=defensive/analytical, 1=adversarial/offensive)
+    "Backend Developer":            {"BD":0.35,"SA":0.40,"RO":0.35},
+    "Frontend Developer":           {"BD":0.40,"SA":0.55,"RO":0.25},
+    "Full Stack Developer":         {"BD":0.80,"SA":0.60,"RO":0.30},
+    "Data Scientist":               {"BD":0.30,"SA":0.45,"RO":0.20},
+    "Data Engineer":                {"BD":0.45,"SA":0.55,"RO":0.30},
+    "Cybersecurity Engineer":       {"BD":0.55,"SA":0.60,"RO":0.85},
+    "DevOps Engineer":              {"BD":0.70,"SA":0.75,"RO":0.55},
+    "Cloud Engineer":               {"BD":0.65,"SA":0.70,"RO":0.45},
+    "Android Developer":            {"BD":0.45,"SA":0.50,"RO":0.25},
+    "QA / Test Automation Engineer":{"BD":0.50,"SA":0.25,"RO":0.70},
 }
 
 FEATURE_NAMES = [

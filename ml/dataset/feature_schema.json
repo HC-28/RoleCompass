@@ -1,70 +1,144 @@
 {
-  "version": "3.0",
-  "total_rows": 3990,
-  "synthetic_rows": 3500,
-  "real_kaggle_rows": 490,
-  "features": 31,
-  "classes": 10,
-  "soc_codes_used": [
-    "15-1252.00",
-    "15-1251.00",
-    "15-1254.00",
-    "15-1255.00",
-    "15-2051.00",
-    "15-2051.01",
-    "15-2051.02",
-    "15-1243.00",
-    "15-1242.00",
-    "15-1243.01",
-    "15-1212.00",
-    "15-1299.05",
-    "15-1244.00",
-    "15-1241.00",
-    "15-1253.00"
+  "feature_count": 31,
+  "scale": "[0.0, 1.0]",
+  "neutral_imputation": 0.6,
+  "note": "RIASEC from O*NET DB 31.0 (CC-BY 4.0 USDOL Feb 2026). Tech weights from SO Dev Survey 2024.",
+  "features": [
+    {
+      "index": 0,
+      "name": "R"
+    },
+    {
+      "index": 1,
+      "name": "I"
+    },
+    {
+      "index": 2,
+      "name": "A"
+    },
+    {
+      "index": 3,
+      "name": "S"
+    },
+    {
+      "index": 4,
+      "name": "E"
+    },
+    {
+      "index": 5,
+      "name": "C"
+    },
+    {
+      "index": 6,
+      "name": "DI"
+    },
+    {
+      "index": 7,
+      "name": "TP"
+    },
+    {
+      "index": 8,
+      "name": "BD"
+    },
+    {
+      "index": 9,
+      "name": "SA"
+    },
+    {
+      "index": 10,
+      "name": "RO"
+    },
+    {
+      "index": 11,
+      "name": "SERVER"
+    },
+    {
+      "index": 12,
+      "name": "STORAGE"
+    },
+    {
+      "index": 13,
+      "name": "API"
+    },
+    {
+      "index": 14,
+      "name": "UI"
+    },
+    {
+      "index": 15,
+      "name": "STATE"
+    },
+    {
+      "index": 16,
+      "name": "BUILD"
+    },
+    {
+      "index": 17,
+      "name": "INFRA"
+    },
+    {
+      "index": 18,
+      "name": "CONTAINER"
+    },
+    {
+      "index": 19,
+      "name": "CLOUD"
+    },
+    {
+      "index": 20,
+      "name": "STATS"
+    },
+    {
+      "index": 21,
+      "name": "MODEL"
+    },
+    {
+      "index": 22,
+      "name": "PIPELINE"
+    },
+    {
+      "index": 23,
+      "name": "MOBILE"
+    },
+    {
+      "index": 24,
+      "name": "THREAT"
+    },
+    {
+      "index": 25,
+      "name": "HARDENING"
+    },
+    {
+      "index": 26,
+      "name": "TESTDES"
+    },
+    {
+      "index": 27,
+      "name": "TESTAUTO"
+    },
+    {
+      "index": 28,
+      "name": "OBSERV"
+    },
+    {
+      "index": 29,
+      "name": "PERF"
+    },
+    {
+      "index": 30,
+      "name": "FULLSPEC"
+    }
   ],
-  "feature_names": [
-    "R",
-    "I",
-    "A",
-    "S",
-    "E",
-    "C",
-    "DI",
-    "TP",
-    "BD",
-    "SA",
-    "RO",
-    "SERVER",
-    "STORAGE",
-    "API",
-    "UI",
-    "STATE",
-    "BUILD",
-    "INFRA",
-    "CONTAINER",
-    "CLOUD",
-    "STATS",
-    "MODEL",
-    "PIPELINE",
-    "MOBILE",
-    "THREAT",
-    "HARDENING",
-    "TESTDES",
-    "TESTAUTO",
-    "OBSERV",
-    "PERF",
-    "FULLSPEC"
-  ],
-  "roles": [
-    "Backend Developer",
-    "Frontend Developer",
-    "Full Stack Developer",
-    "Data Scientist",
-    "Data Engineer",
-    "Cybersecurity Engineer",
-    "DevOps Engineer",
-    "Cloud Engineer",
-    "Android Developer",
-    "QA / Test Automation Engineer"
-  ]
+  "role_soc_mapping": {
+    "Backend Developer": "15-1252",
+    "Frontend Developer": "15-1255",
+    "Full Stack Developer": "15-1252",
+    "Data Scientist": "15-2051",
+    "Data Engineer": "15-1243",
+    "Cybersecurity Engineer": "15-1212",
+    "DevOps Engineer": "15-1244",
+    "Cloud Engineer": "15-1241",
+    "Android Developer": "15-1252",
+    "QA / Test Automation Engineer": "15-1253"
+  }
 }

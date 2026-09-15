@@ -36,6 +36,13 @@ if os.path.exists('role_predictor.pkl') and os.path.exists('label_encoder.pkl'):
 else:
     print("[WARN] Models not found. Train first with train_model.py")
 
+@app.on_event("startup")
+async def startup_banner():
+    print("---------------------------------------------------------")
+    print("  RoleCompass ML Service running at: http://localhost:8000")
+    print("  API Docs:                          http://localhost:8000/docs")
+    print("---------------------------------------------------------")
+
 EXPECTED_FEATURES = 20
 
 # ── Request / Response schemas ────────────────────────────────────────────────
