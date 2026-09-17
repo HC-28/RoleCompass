@@ -1,0 +1,415 @@
+ROLECOMPASS — SYNTHETIC DATASET GENERATION: METHODOLOGY & CALCULATIONS
+For use in: Dataset Methodology Report DOCX (give separately to Claude)
+Document prepared for: Claude (document generation)
+Prepared by: Engineering Lead
+Date: September 2026
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 1 — OVERVIEW: WHY SYNTHETIC DATA?
+═══════════════════════════════════════════════════════════════════════════════
+
+The ML model needs to classify candidates into 10 software career roles based on
+31 psychometric and technical features. The challenge: there is no labelled ground-truth
+dataset of real candidates with verified career fit.
+
+Instead of sourcing raw survey data from real candidates (which requires IRB approval,
+privacy consent, and years of collection), we used a principled hybrid approach:
+
+  APPROACH: Synthetic data anchored on REAL public datasets.
+
+  Sources:
+    1. O*NET Database v31.0 (Feb 2026) — CC-BY 4.0 licence, US Dept of Labor
+       Provides scientifically validated RIASEC scores for occupational SOC codes.
+    2. Stack Overflow Developer Survey 2024 — CC-BY-SA 4.0
+       Provides real-world technology usage rates per developer type (~65,000 respondents).
+    3. Kaggle IT Job Roles & Skills dataset (dhivyadharunaba) — CC0 Public Domain
+       Candidate profiles with skills listed per job role.
+    4. Kaggle Candidate Job Role Dataset (ckshetty) — CC0 Public Domain
+       Candidate profiles mapped to role labels.
+
+  Why this is valid:
+    - The center point of each role's feature distribution comes from validated,
+      peer-reviewed occupational data (O*NET), not from assumptions.
+    - The technology weight priors come from real survey data of 65,000 developers.
+    - Gaussian noise around these center points generates realistic within-role variance.
+    - Overlap blending explicitly encodes known career pathway similarities
+      (e.g., Backend → Full Stack, DevOps → Cloud).
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 2 — FEATURE SPACE DEFINITION (31 FEATURES)
+═══════════════════════════════════════════════════════════════════════════════
+
+All 31 features are normalised to [0, 1] before training.
+
+─── BLOCK A: RIASEC DIMENSIONS (6 features) ───────────────────────────────────
+
+Source: O*NET Database v31.0 career_interest_types.csv
+Scale: Raw score range 1.0–7.0 on O*NET → Normalised to [0, 1] by dividing by 7.0
+
+Feature  Description
+───────  ─────────────────────────────────────────────────────────────────────
+R        Realistic — preference for hands-on, physical, tool-based work
+I        Investigative — analytical curiosity, research, intellectual depth
+A        Artistic — creative expression, design, aesthetics
+S        Social — helping others, collaboration, communication
+E        Enterprising — leadership, persuasion, initiative
+C        Conventional — structure, order, precision, rule-following
+
+Normalisation formula:
+  feature_norm = raw_onet_score / 7.0
+
+Example (Data Scientist, SOC 15-2051):
+  R_raw = 2.17 → R_norm = 2.17 / 7.0 = 0.310
+  I_raw = 6.98 → I_norm = 6.98 / 7.0 = 0.997
+  A_raw = 2.61 → A_norm = 2.61 / 7.0 = 0.373
+  S_raw = 1.66 → S_norm = 1.66 / 7.0 = 0.237
+  E_raw = 1.71 → E_norm = 1.71 / 7.0 = 0.244
+  C_raw = 5.39 → C_norm = 5.39 / 7.0 = 0.770
+
+─── BLOCK B: PREDIGER AXES (2 derived features) ────────────────────────────────
+
+Source: Prediger (1982) — "Dimensions Underlying Holland's Hexagon" JEMC Vol.30 No.3
+These axes were derived by Dale Prediger as orthogonal transformations of Holland's
+hexagonal RIASEC model into a 2D spatial representation.
+
+Feature  Name              Formula
+───────  ────────────────  ──────────────────────────────────────────────────────
+DI       Data-Ideas axis   DI = ((C + E) - (I + A) + 12) / 24
+TP       Things-People     TP = ((R + C) - (S + E) + 12) / 24
+
+WHY:  DI > 0.5 means preference for data/facts over ideas/concepts.
+      TP > 0.5 means preference for things/systems over people.
+      These axes capture orthogonal psychometric variation that the raw RIASEC scores
+      alone cannot represent.
+
+Example calculation (Data Scientist, using raw scores):
+  DI = ((5.39 + 1.71) - (6.98 + 2.61) + 12) / 24
+     = (7.10 - 9.59 + 12) / 24
+     = 9.51 / 24
+     = 0.396   → Data Scientist leans TOWARD IDEAS (DI < 0.5), consistent with theoretical work.
+
+  TP = ((2.17 + 5.39) - (1.66 + 1.71) + 12) / 24
+     = (7.56 - 3.37 + 12) / 24
+     = 16.19 / 24
+     = 0.675   → Data Scientist leans TOWARD THINGS (TP > 0.5), consistent with data/model work.
+
+─── BLOCK C: PROJECT-SPECIFIC AXES (3 expert-derived features) ──────────────────
+
+These three dimensions were not available in O*NET (no public occupational data covers
+them). They were derived by the engineering team from first principles, backed by
+industry literature and career guides, and are intentionally static (not calibrated
+against Kaggle data because no clean signal exists).
+
+Feature  Range   Description
+───────  ──────  ─────────────────────────────────────────────────────────────
+BD       [0,1]   Breadth-Depth index: 0 = deep specialist, 1 = broad generalist
+SA       [0,1]   Structure-Ambiguity: 0 = loves rigid structure, 1 = thrives in ambiguity
+RO       [0,1]   Risk/Offense orientation: 0 = defensive/protective, 1 = adversarial/offensive
+
+Values by role:
+  Role                          BD     SA     RO
+  ─────────────────────────     ─────  ─────  ─────
+  Backend Developer             0.35   0.40   0.35   (deep, moderate structure, neutral risk)
+  Frontend Developer            0.40   0.55   0.25   (moderate depth, some ambiguity, low risk)
+  Full Stack Developer          0.80   0.60   0.30   (broadest generalist, high ambiguity comfort)
+  Data Scientist                0.30   0.45   0.20   (deepest specialist, research-structured)
+  Data Engineer                 0.45   0.55   0.30   (medium breadth, some ambiguity)
+  Cybersecurity Engineer        0.55   0.60   0.85   (broad-ish, ambiguous threats, HIGH offense)
+  DevOps Engineer               0.70   0.75   0.55   (very broad, very ambiguous, moderate risk)
+  Cloud Engineer                0.65   0.70   0.45   (broad, ambiguous infra)
+  Android Developer             0.45   0.50   0.25   (medium, structured platform)
+  QA / Test Automation Eng.     0.50   0.25   0.70   (medium, VERY structured, high defensiveness)
+
+─── BLOCK D: TECHNOLOGY DOMAIN WEIGHTS (20 features) ────────────────────────────
+
+These 20 features represent the strength of affinity for each technical domain.
+They are the features directly probed by Section 2 of the assessment.
+
+Feature      Section 2 Domain    Description
+──────────   ─────────────────   ─────────────────────────────────────
+SERVER       Server Logic        Server-side application logic, APIs, concurrency
+STORAGE      Data Storage        Relational/NoSQL databases, schema design, queries
+API          API Design          REST/GraphQL contract design, versioning
+UI           UI Rendering        Frontend rendering, component architecture
+STATE        State Management    Client-side state, global store patterns
+BUILD        Build Pipeline      CI/CD pipelines, build tools, automation
+INFRA        Infrastructure      Infrastructure-as-Code, networking, provisioning
+CONTAINER    Containers          Docker, Kubernetes, orchestration
+CLOUD        Cloud Services      AWS/Azure/GCP, managed services, multi-cloud
+STATS        Statistical Anal.   Statistics, probability, distributions
+MODEL        ML Model Building   ML model selection, training, tuning
+PIPELINE     Data Pipeline/ETL   Streaming, batch ETL, Spark/Kafka
+MOBILE       Mobile Client       Android/iOS SDK, cross-platform frameworks
+THREAT       Threat Analysis     Security threat modelling, attack vectors
+HARDENING    System Hardening    Zero-trust, hardening, security baseline
+TESTDES      Test Case Design    Test strategy, boundary value analysis, edge cases
+TESTAUTO     Test Automation     Selenium, Playwright, Cypress, framework setup
+OBSERV       Observability       Prometheus, Grafana, Datadog, alerting, SLOs
+PERF         Performance         CPU/memory profiling, optimization, benchmarking
+FULLSPEC     Full-Spectrum       Cross-cutting delivery, full-stack ownership
+
+Weight source: Stack Overflow Developer Survey 2024 — reported technology usage rates
+per DevType self-identification category.
+Values represent the probability that a self-identified developer of that role uses
+the corresponding technology domain (0.0 = never, 1.0 = always).
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 3 — SOC CODE MAPPING (RIASEC ANCHORING)
+═══════════════════════════════════════════════════════════════════════════════
+
+Each role is mapped to one or more O*NET SOC codes with fractional weights to
+produce a composite RIASEC profile. This handles roles that span multiple occupational
+categories.
+
+SINGLE-SOC MAPPING (build_datasets.py, simplified):
+  Role → SOC → Raw RIASEC values
+
+WEIGHTED-COMPOSITE MAPPING (build_03_04.py, MNC-grade):
+  Role → [(SOC₁, w₁), (SOC₂, w₂), (SOC₃, w₃)] where Σwᵢ = 1.0
+
+Composite RIASEC for dimension d:
+  score_d = Σ (weight_i × raw_RIASEC_d for SOC_i)
+
+Example (Full Stack Developer):
+  SOCs: (15-1252.00 "Software Developers", 0.40)
+        (15-1254.00 "Web Developers", 0.35)
+        (15-1255.00 "Web & Digital Interface Designers", 0.25)
+
+  R = 0.40 × 3.61 + 0.35 × 2.98 + 0.25 × 2.59 = 1.444 + 1.043 + 0.648 = 3.135
+  I = 0.40 × 6.05 + 0.35 × 5.01 + 0.25 × 4.88 = 2.420 + 1.754 + 1.220 = 5.394
+  A = 0.40 × 2.37 + 0.35 × 3.13 + 0.25 × 4.48 = 0.948 + 1.096 + 1.120 = 3.164
+  S = 0.40 × 1.81 + 0.35 × 2.22 + 0.25 × 2.20 = 0.724 + 0.777 + 0.550 = 2.051
+  E = 0.40 × 1.87 + 0.35 × 2.96 + 0.25 × 3.13 = 0.748 + 1.036 + 0.783 = 2.567
+  C = 0.40 × 5.62 + 0.35 × 5.03 + 0.25 × 4.40 = 2.248 + 1.761 + 1.100 = 5.109
+
+  Then normalise: each / 7.0
+  R_norm = 3.135/7 = 0.448, I_norm = 5.394/7 = 0.771, ...
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 4 — TECHNOLOGY WEIGHT CALIBRATION
+═══════════════════════════════════════════════════════════════════════════════
+
+The Stack Overflow weights are the PRIOR. They are calibrated against real Kaggle data
+to correct for any divergence between self-reported survey responses (SO) and actual
+job postings / candidate profiles (Kaggle).
+
+STEP A — Signal extraction from Kaggle sources:
+
+  For each role and each tech feature:
+    k2_signal[feature] = count(profiles mentioning skill that maps to feature) / total_profiles
+    k3_signal[feature] = count(JDs mentioning skill that maps to feature) / total_JDs
+
+  Skill-to-feature mapping (keyword matching):
+    "Python"       → [STATS, MODEL, PIPELINE]
+    "Java"         → [SERVER, API]
+    "SQL"          → [STORAGE]
+    "Docker"       → [CONTAINER, BUILD]
+    "Kubernetes"   → [CONTAINER, INFRA]
+    "AWS/Azure/GCP"→ [CLOUD, INFRA]
+    "React/Vue"    → [UI, STATE]
+    ... (38 skills mapped across 20 features)
+
+STEP B — Weighted blend formula:
+
+  If BOTH Kaggle sources are available for a role:
+    calibrated_weight = 0.50 × SO_prior + 0.35 × k3_JD_signal + 0.15 × k2_profile_signal
+
+  If ONLY Kaggle JDs are available:
+    calibrated_weight = 0.60 × SO_prior + 0.40 × k3_JD_signal
+
+  If NO Kaggle data for that role:
+    calibrated_weight = SO_prior   (no change)
+
+BLEND RATIONALE:
+  - SO prior at 50%: The survey has 65,000 respondents, statistically robust. Baseline.
+  - JD signal at 35%: Job descriptions reflect what employers actually require — this is
+    closer to ground truth for predicting role fit than self-reported preferences.
+  - Profile signal at 15%: Candidate profiles are noisier (self-reporting biases),
+    so they get lower weight.
+
+STEP C — Clipping to valid range:
+  calibrated_weight = clip(calibrated_weight, 0.0, 1.0)
+
+STEP D — Change logging:
+  Any feature whose weight shifts by |Δ| ≥ 0.05 is recorded in calibration_changes.csv
+  with direction (up/down) and the number of Kaggle samples that drove the change.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 5 — SYNTHETIC SAMPLE GENERATION (Gaussian Noise Model)
+═══════════════════════════════════════════════════════════════════════════════
+
+ALGORITHM per role:
+
+  1. Build the role center vector μ (31-dimensional):
+       μ = [R_norm, I_norm, A_norm, S_norm, E_norm, C_norm, DI, TP, BD, SA, RO,
+            calibrated_SERVER, calibrated_STORAGE, ..., calibrated_FULLSPEC]
+
+  2. Choose noise standard deviation σ for this role (role-specific):
+       Full Stack Developer:  σ = 0.085  (broadest variance — role is genuinely ambiguous)
+       DevOps Engineer:       σ = 0.075  (wide infra-development boundary)
+       Cloud Engineer:        σ = 0.075  (similar to DevOps, infra overlap)
+       Frontend Developer:    σ = 0.065  (moderate — some design/JS variance)
+       Data Engineer:         σ = 0.065  (some overlap with DS and Backend)
+       All others:            σ = 0.060  (tighter distributions for more distinct roles)
+
+  3. Generate synthetic profile:
+       x_i = μ_i + N(0, σ²)   for each of 31 dimensions
+       x_i = clip(x_i, 0.0, 1.0)
+
+  4. Apply overlap blending with 20% probability:
+       IF random(0,1) < 0.20 AND this role has adjacent roles:
+         pick adj_role from adjacency list
+         pick alpha ~ Uniform(0.10, 0.30)
+         x = (1 - alpha) × x_this + alpha × μ_adj
+
+     This generates realistic "dual-path" candidates — e.g., a Full Stack Developer
+     who leans Backend (alpha=0.25 toward Backend center) vs one who leans Frontend.
+
+  5. Generate n_synth = 350 samples per role.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 6 — ROLE ADJACENCY GRAPH (Overlap Blending Pairs)
+═══════════════════════════════════════════════════════════════════════════════
+
+These pairs define which roles can produce overlap-blended samples. Each directed
+edge means "a candidate of the FROM role may plausibly have some features of the TO role."
+
+FROM                            TO                            REASON
+──────────────────────────────  ────────────────────────────  ─────────────────────────────
+Backend Developer               Full Stack Developer          Shares all backend skills; often self-identifies as FS
+Full Stack Developer            Backend Developer             Contains full backend capability set
+Full Stack Developer            Frontend Developer            Contains full frontend capability set
+Frontend Developer              Full Stack Developer          Often transitions to FS; learns backend progressively
+Data Scientist                  Data Engineer                 Both work with Python, data pipelines, large datasets
+Data Engineer                   Data Scientist                Both work at scale with structured data
+DevOps Engineer                 Cloud Engineer                Infra overlap is 80%+
+Cloud Engineer                  DevOps Engineer               CI/CD and container orchestration are shared
+Android Developer               Frontend Developer            UI/UX thinking and state management are shared concepts
+QA / Test Automation Engineer   Backend Developer             API testing, code quality overlap with backend teams
+Cybersecurity Engineer          DevOps Engineer               Infrastructure hardening and Linux administration overlap
+
+NOTE: These are directional edges, not symmetric. A DevOps engineer blends toward Cloud,
+but a Data Scientist does NOT blend toward Backend — that path was not observed in practice.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 7 — REAL KAGGLE DATA INTEGRATION
+═══════════════════════════════════════════════════════════════════════════════
+
+For roles where Kaggle Dataset 2 (candidate profiles) provides labelled samples:
+
+  STEP 1: Start from role center μ (calibrated vector for this role)
+  STEP 2: For each skill keyword found in candidate's profile:
+    tech feature indices that keyword maps to → bump those feature values:
+      vec[fidx] = min(vec[fidx] + 0.15, 1.0)
+  STEP 3: Add small noise: vec = vec + N(0, 0.04²)
+  STEP 4: Clip: vec = clip(vec, 0.0, 1.0)
+  STEP 5: Label this row as "real_kaggle" (not "synthetic")
+
+Rationale for starting from μ instead of empty vector:
+  Raw Kaggle profiles only list skills (binary presence/absence). They do not have
+  RIASEC scores, BD/SA/RO values, or many tech dimensions. Starting from μ ensures
+  all 31 features are populated; the skill bumps then correctly shift the tech
+  features while leaving psych features realistic for that role.
+
+Kaggle roles available vs not:
+  Role                          Kaggle Label(s) Used              Samples
+  ──────────────────────────────────────────────────────────────  ───────
+  Backend Developer             "Backend Developer"               ~80 max
+  Frontend Developer            "Frontend Developer", "Web Dev"   ~80 max
+  Full Stack Developer          "Full Stack Java Dev", "FS Python" ~80 max
+  Data Scientist                "Data Scientist", "AIML"          ~80 max
+  Cybersecurity Engineer        "Cybersecurity Engineer"          ~80 max
+  DevOps Engineer               "DevOps Engineer", "K8s Ops Eng"  ~80 max
+  Android Developer             "Mobile Developer"                ~80 max
+  Data Engineer                 (none — synthetic only)           0
+  Cloud Engineer                (none — synthetic only)           0
+  QA / Test Automation Eng.     (none — synthetic only)           0
+
+Roles with NO Kaggle data use 350 synthetic samples only.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 8 — FINAL DATASET COMPOSITION
+═══════════════════════════════════════════════════════════════════════════════
+
+Per-role composition (approximate, varies with actual Kaggle data available):
+  Role                              Synthetic   Real Kaggle   Total
+  ─────────────────────────────────────────────────────────  ──────
+  Backend Developer                 350          80            430
+  Frontend Developer                350          80            430
+  Full Stack Developer              350         160            510
+  Data Scientist                    350         160            510
+  Data Engineer                     350           0            350
+  Cybersecurity Engineer            350          80            430
+  DevOps Engineer                   350         160            510
+  Cloud Engineer                    350           0            350
+  Android Developer                 350          80            430
+  QA / Test Automation Engineer     350           0            350
+
+  TOTAL                           3,500         800          4,300 (approx)
+
+Exact totals depend on Kaggle data availability. The generation script reports
+the actual count after each run.
+
+OUTPUTS:
+  rolecompass_hybrid_training.csv   → Main training file (synthetic + real, labelled)
+  rolecompass_synthetic_only.csv    → Synthetic rows only (for ablation studies)
+  rolecompass_real_kaggle_only.csv  → Real rows only (for model validation)
+  rolecompass_synthetic.csv         → Same as hybrid (replaces legacy file for train_model.py)
+  dataset_composition_stats.csv     → Per-role counts
+  feature_schema.json               → Feature names, sources, composition metadata
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 9 — SANITY CHECKS (Automated Validation)
+═══════════════════════════════════════════════════════════════════════════════
+
+After generation, the script runs 12 automated checks:
+
+  CHECK                              EXPECTED RESULT
+  ────────────────────────────────   ──────────────────────────────────────
+  Backend highest SERVER             Backend Developer has max avg(SERVER)
+  Frontend highest UI                Frontend Developer has max avg(UI)
+  Data Scientist highest STATS       Data Scientist has max avg(STATS)
+  Data Scientist highest MODEL       Data Scientist has max avg(MODEL)
+  Data Engineer highest PIPELINE     Data Engineer has max avg(PIPELINE)
+  Cybersecurity highest THREAT       Cybersecurity Engineer has max avg(THREAT)
+  QA highest TESTAUTO                QA/Test Automation Eng has max avg(TESTAUTO)
+  Android highest MOBILE             Android Developer has max avg(MOBILE)
+  DevOps highest BUILD               DevOps Engineer has max avg(BUILD)
+  Cloud highest CLOUD                Cloud Engineer has max avg(CLOUD)
+  Data Scientist highest I           Data Scientist has max avg(I) among RIASEC
+  All features in [0,1]              No feature value is < 0 or > 1
+
+Expected: 12/12 checks pass.
+If any check fails, the generation script reports [FAIL] and the run must be reviewed
+before using the dataset for training.
+
+═══════════════════════════════════════════════════════════════════════════════
+PART 10 — MODEL TRAINING (train_model.py)
+═══════════════════════════════════════════════════════════════════════════════
+
+Input:  rolecompass_synthetic.csv  (hybrid: synthetic + real)
+Target: "role" column  (10 classes)
+Features: All columns except "role" and "source"
+
+The model is a Random Forest classifier:
+  - 300 estimators
+  - Max depth: None (grows fully)
+  - Feature selection: all 31 features
+  - Train/test split: 80/20
+  - Evaluation: Accuracy + per-class F1 + confusion matrix
+
+Output:
+  model.pkl           → Serialised sklearn RandomForestClassifier
+  label_encoder.pkl   → Fitted LabelEncoder for role name decoding
+  model_metrics.json  → Accuracy, per-class F1, confusion matrix
+
+Inference contract (FastAPI /score endpoint):
+  INPUT:  { "features": [f0, ..., f19], "candidate_roles": ["Role A", "Role B", ...] }
+  → Section 2 answers produce a 20-dim tech vector [0,1]^20
+  → candidate_roles filters the output to surviving roles only
+  OUTPUT: { "predicted_role": "...", "confidence": 0.93, "alternates": [...] }
+
+Note: The ML service currently receives only the 20 tech features (BLOCK D), not
+all 31. The RIASEC/Prediger/BD/SA/RO features (BLOCKS A, B, C) are used by the
+backend routing engine (psychometric gate) — they are not forwarded to the ML model.
+Future improvement: pass all 31 features to the ML service for richer prediction.
