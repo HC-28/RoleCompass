@@ -1,0 +1,471 @@
+ROLECOMPASS QUESTION BANK v2.0 - Complete Technical Specification
+10 Target Roles | 4 Sections | 20 ML Technical Features + 11 Psychometric Dimensions
+
+======================================================================
+SECTION 1 - PERSONALITY & WORK STYLE FOUNDATION (16 questions, MANDATORY)
+FSM: SECTION_1_RIASEC | Evaluates: 11 Psychometric Dimensions
+Dimensions: Realistic (R), Investigative (I), Artistic (A), Social (S),
+Enterprising (E), Conventional (C), Data vs Ideas (DI), Things vs People (TP),
+Breadth vs Depth (BD), Structure vs Ambiguity (SA), Risk / Offense vs Defense (RO)
+======================================================================
+
+S1-Q01 [DIM_REALISTIC]
+Question: I would rather spend an afternoon building or fixing something, even if it does not turn out perfectly, than studying abstract concepts with no immediate practical application.
+WHY: Realistic (R) = preference for hands-on, concrete system mechanics. Foundation of DevOps, Cloud, Android, and Backend. Students who disengage from hands-on tinkering struggle in operational and systems engineering.
+GATE IF LOW: DevOps Engineer, Cloud Engineer
+
+S1-Q02 [DIM_REALISTIC]
+Question: When an application or environment stops working - crashing with an obscure error or no error at all - my natural reflex is to investigate and troubleshoot it myself.
+WHY: Problem ownership and debugging tenacity. Critical for QA, DevOps, and Backend.
+GATE IF LOW: Backend Developer, DevOps Engineer
+
+S1-Q03 [DIM_INVESTIGATIVE]
+Question: I enjoy reading technical specifications, RFCs, and internal architecture docs to understand how a tool works under the hood, even when not strictly required for my task.
+WHY: Investigative (I) = intellectual curiosity and scientific rigor. Primary predictor for Data Scientist and Cybersecurity Researcher.
+GATE IF LOW: Data Scientist
+
+S1-Q04 [DIM_INVESTIGATIVE]
+Question: Facing an open-ended problem with no textbook solution excites me more than executing a well-documented process.
+WHY: Tolerance for ambiguity and scientific inquiry. Distinguishes exploratory Data Science and Security research from prescriptive development.
+GATE IF LOW: Data Scientist, Cybersecurity Engineer
+
+S1-Q05 [DIM_ARTISTIC]
+Question: I care deeply about the visual elegance, responsiveness, and tactile polish of an interface - it bothers me when an interaction feels clunky or unrefined.
+WHY: Artistic (A) = sensory craft and aesthetic empathy. Essential for Frontend and Android; irrelevant for Backend/DevOps.
+GATE IF LOW: Frontend Developer, Android Developer
+
+S1-Q06 [DIM_ARTISTIC - HIGH GATE]
+Question: When assigned a software task, I feel constrained if strict schemas, established coding patterns, or rigid processes limit my creative freedom.
+WHY: High artistic/creative freedom preference conflicts with rigid schema governance. QA requires strict test plans; Data Engineering requires uncompromising schemas.
+GATE IF VERY HIGH: Data Engineer, QA / Test Automation Engineer
+
+S1-Q07 [DIM_CONVENTIONAL]
+Question: I prefer working within clear frameworks - documented standards, strict schemas, and repeatable checklists - over inventing my own workflow on the fly.
+WHY: Conventional (C) = orderliness and procedural compliance. Foundational for QA, Compliance Security, and Data Engineering.
+GATE IF LOW: QA / Test Automation Engineer, Data Engineer
+
+S1-Q08 [DIM_CONVENTIONAL - HIGH GATE]
+Question: If a process has unexpected edge cases or lacks predefined steps, I prefer to pause and wait for formal guidelines rather than improvise.
+WHY: Extreme C blocks fast-moving, high-ambiguity roles like DevOps and early-stage Full Stack engineering.
+GATE IF VERY HIGH: DevOps Engineer, Full Stack Developer
+
+S1-Q09 [DIM_ENTERPRISING]
+Question: When collaborating on a software project, I naturally gravitate toward pitching architectural directions, prioritizing features, and coordinating team consensus.
+WHY: Enterprising (E) = leadership, initiative, and commercial impact. Correlates strongly with Full Stack developers and technical leads.
+STRENGTHENS: Full Stack Developer, DevOps Engineer
+
+S1-Q10 [DIM_SOCIAL]
+Question: I do my most effective technical problem-solving when actively talking through problems with peers, conducting pair programming, or reviewing code collaboratively.
+WHY: Social (S) = collaborative versus isolated work preference. High S supports team-facing roles (Frontend, Full Stack); low S supports deep-focus research (Data Science).
+GATE IF LOW: Frontend Developer, Full Stack Developer
+
+S1-Q11 [DIM_DATA_IDEAS]
+Question: I am more convinced by hard metrics, benchmark graphs, and empirical logs than by theoretical elegance or persuasive arguments.
+WHY: Data vs Ideas axis. Core empiricism required for Data Science and Data Engineering.
+GATE IF LOW: Data Scientist, Data Engineer
+
+S1-Q12 [DIM_THINGS_PEOPLE]
+Question: I find it more gratifying to optimize an infrastructure cluster to handle 100,000 concurrent requests than to run user interviews to test feature desirability.
+WHY: Things vs People axis. Systems roles (DevOps, Cloud, Backend) operate squarely in the Things quadrant.
+GATE IF LOW: Cloud Engineer, DevOps Engineer, Backend Developer
+
+S1-Q13 [DIM_STRUCT_AMBIG]
+Question: I can spend several hours investigating a silent failure with zero stack traces or logging clues without feeling demotivated or frustrated.
+WHY: Frustration tolerance and resilience under ambiguity. Essential in Cybersecurity and Backend systems.
+GATE IF LOW: Cybersecurity Engineer, Backend Developer
+
+S1-Q14 [DIM_BREADTH_DEPTH]
+Question: When spotting a subtle imperfection - an unhandled boundary condition, a minor memory leak, or a layout alignment flaw - I feel compelled to resolve it immediately.
+WHY: Detail orientation. Distinguishes thorough QA and Security specialists from rapid MVP builders.
+GATE IF LOW: QA / Test Automation Engineer, Cybersecurity Engineer
+
+S1-Q15 [DIM_BREADTH_DEPTH - VELOCITY]
+Question: I would rather build a functional end-to-end prototype in two days to validate an idea than spend two weeks designing a distributed architecture that scales to millions.
+WHY: Velocity vs Rigor trade-off. Prototype-first indicates Full Stack / Frontend; architecture-first indicates Backend / Cloud / Data Engineering.
+GATE IF HIGH: Prunes Data Engineer, Cloud Engineer
+
+S1-Q16 [DIM_OFFENSE_DEF]
+Question: When designing software, my first priority is anticipating how a malicious actor or bad input could compromise the system, rather than just delivering the happy path.
+WHY: Offensive vs Defensive security mindset. Separates security-conscious systems builders from feature-only developers.
+STRENGTHENS: Cybersecurity Engineer, Backend Developer
+
+======================================================================
+SECTION 2 - TECHNICAL CORE SCAN (40 questions, MANDATORY / DYNAMIC)
+FSM: SECTION_2_TECH_CORE | Measures the EXACT 20 ML Technical Features
+2 Questions per Feature: Q1 = Core Concept & Interest | Q2 = Engineering Reality & Trade-offs
+======================================================================
+
+FEATURE 01: SERVER LOGIC (TECH_SERVER_LOGIC)
+S2-Q01 [TECH_SERVER_LOGIC - CONCEPT]
+Question: Designing the internal business logic of an application - validating data, coordinating transactions, and routing workflows - sounds like engaging work.
+WHY: Core backend domain interest. Measures alignment with non-visual system mechanics.
+GATE IF LOW: Backend Developer, Full Stack Developer
+
+S2-Q02 [TECH_SERVER_LOGIC - CONCURRENCY]
+Question: Understanding what happens when hundreds of clients try to read and write the exact same resource simultaneously sounds like a fascinating puzzle to solve.
+WHY: Concurrency, deadlocks, and race conditions represent the difficult reality of backend engineering.
+GATE IF LOW: Backend Developer
+
+FEATURE 02: DATA STORAGE (TECH_DATA_STORAGE)
+S2-Q03 [TECH_DATA_STORAGE - SCHEMA]
+Question: Designing relational database schemas - establishing primary keys, foreign constraints, and indexing strategies to prevent redundancy - sounds appealing.
+WHY: Schema design is the bedrock of reliable persistence for Backend and Data Engineering.
+GATE IF LOW: Backend Developer, Data Engineer
+
+S2-Q04 [TECH_DATA_STORAGE - TUNING]
+Question: Analyzing an execution plan for a slow query and adding composite indices or restructuring joins to reduce execution time from 10s to 5ms sounds rewarding.
+WHY: Database performance tuning separates basic application coders from specialized backend and data engineers.
+GATE IF LOW: Data Engineer, Backend Developer
+
+FEATURE 03: API DESIGN (TECH_API_DESIGN)
+S2-Q05 [TECH_API_DESIGN - CONTRACTS]
+Question: Designing clear, consistent API endpoints (REST, GraphQL, or gRPC) that other developers find predictable and effortless to integrate with sounds exciting.
+WHY: API contract design is the external boundary for Backend and Full Stack systems.
+GATE IF LOW: Backend Developer, Full Stack Developer
+
+S2-Q06 [TECH_API_DESIGN - PROTOCOLS]
+Question: Learning the internal mechanics of protocols like HTTP/2, WebSockets, gRPC streaming, and OAuth2 token lifecycles sounds worthwhile and interesting.
+WHY: Protocol fluency separates higher-tier backend and security engineers from superficial script writers.
+GATE IF LOW: Backend Developer, Cybersecurity Engineer
+
+FEATURE 04: UI RENDERING (TECH_UI_RENDERING)
+S2-Q07 [TECH_UI_RENDERING - INTERACTION]
+Question: Writing code that turns raw data into interactive, animated components that respond immediately to clicks, touches, and gestures sounds rewarding.
+WHY: Visual interaction and component engineering are the heart of Frontend development.
+GATE IF LOW: Frontend Developer, Android Developer
+
+S2-Q08 [TECH_UI_RENDERING - LAYOUT ENGINE]
+Question: Figuring out why a CSS layout or responsive grid behaves unexpectedly across different viewport sizes and resolving it with clean styling sounds satisfying.
+WHY: CSS debugging and layout engine comprehension make up a significant portion of real-world frontend work.
+GATE IF LOW: Frontend Developer
+
+FEATURE 05: STATE MANAGEMENT (TECH_STATE_MGMT)
+S2-Q09 [TECH_STATE_MGMT - REACTIVE FLOW]
+Question: Managing complex client-side data flows - synchronizing caching layers, optimistic UI updates, and reactive component re-renders - sounds exciting.
+WHY: Modern client-side applications live or die by their state architecture (Redux, Zustand, Vuex, Compose State).
+GATE IF LOW: Frontend Developer, Android Developer
+
+S2-Q10 [TECH_STATE_MGMT - ASYNC RACES]
+Question: Debugging an issue where asynchronous data fetching causes inconsistent screens or race conditions when users click rapidly sounds like an engaging challenge.
+WHY: Race conditions in client state separate senior frontend engineers from junior web page coders.
+STRENGTHENS: Frontend Developer, Android Developer
+
+FEATURE 06: BUILD PIPELINES (TECH_BUILD_PIPELINE)
+S2-Q11 [TECH_BUILD_PIPELINE - TOOLING]
+Question: Configuring bundlers and build tools (like Vite, Webpack, Maven, or Gradle) so that compilation, tree-shaking, and minification run seamlessly sounds appealing.
+WHY: Build systems are foundational in Android (Gradle) and enterprise development.
+GATE IF LOW: DevOps Engineer, Android Developer
+
+S2-Q12 [TECH_BUILD_PIPELINE - ARTIFACTS]
+Question: Troubleshooting why a build passes locally but fails during packaging due to dependency graph conflicts or compiler flags is a challenge I am happy to tackle.
+WHY: Dependency management and artifact packaging are daily realities in DevOps and Mobile build engineering.
+GATE IF LOW: DevOps Engineer
+
+FEATURE 07: INFRASTRUCTURE PROVISIONING (TECH_INFRA_PROVISION)
+S2-Q13 [TECH_INFRA_PROVISION - LINUX & CLI]
+Question: Working in a pure terminal - writing Bash scripts, managing OS processes, and configuring Linux network settings - feels natural and comfortable.
+WHY: Linux systems literacy is an absolute hard gate for DevOps, Cloud, and Cybersecurity.
+GATE IF LOW: DevOps Engineer, Cloud Engineer, Cybersecurity Engineer
+
+S2-Q14 [TECH_INFRA_PROVISION - NETWORKING]
+Question: Understanding how DNS routing, IP CIDR blocks, subnets, NAT gateways, and reverse proxies guide network traffic across the internet sounds engaging.
+WHY: Systems networking is the common thread across Cloud, DevOps, and Security infrastructure.
+GATE IF LOW: Cloud Engineer, Cybersecurity Engineer
+
+FEATURE 08: CONTAINER ORCHESTRATION (TECH_CONTAINER_ORCH)
+S2-Q15 [TECH_CONTAINER_ORCH - DOCKER]
+Question: Packaging applications into lightweight Docker containers to ensure they run identically on any machine or server sounds like modern, disciplined engineering.
+WHY: Containerization is the industry-standard unit of delivery.
+GATE IF LOW: DevOps Engineer, Cloud Engineer
+
+S2-Q16 [TECH_CONTAINER_ORCH - KUBERNETES]
+Question: Learning how orchestrators like Kubernetes automatically scale, self-heal, and route traffic across clusters of containers sounds interesting.
+WHY: Orchestration is what separates basic sysadmins from modern Cloud/DevOps platform engineers.
+GATE IF LOW: DevOps Engineer, Cloud Engineer
+
+FEATURE 09: CLOUD SERVICES (TECH_CLOUD_SERVICES)
+S2-Q17 [TECH_CLOUD_SERVICES - MANAGED PLATFORMS]
+Question: Designing an architecture utilizing cloud primitives (like AWS S3, Lambda, SQS, DynamoDB, and IAM policies) instead of running a single monolithic server sounds exciting.
+WHY: Cloud architecture literacy is the core differentiator for modern Cloud Engineers.
+GATE IF LOW: Cloud Engineer
+
+S2-Q18 [TECH_CLOUD_SERVICES - RESILIENCE & COST]
+Question: Designing multi-availability-zone architectures that survive regional cloud outages while optimizing compute costs (FinOps) sounds like an engaging challenge.
+WHY: High availability and cost governance are what enterprise Cloud Architects are evaluated on.
+GATE IF LOW: Cloud Engineer
+
+FEATURE 10: STATISTICAL ANALYSIS (TECH_STAT_ANALYSIS)
+S2-Q19 [TECH_STAT_ANALYSIS - FOUNDATIONS]
+Question: I am comfortable with statistical concepts like probability distributions, hypothesis testing, confidence intervals, and regression analysis.
+WHY: Mathematical foundations for Data Science. Without statistics, ML is blind library execution.
+GATE IF LOW: Data Scientist
+
+S2-Q20 [TECH_STAT_ANALYSIS - EMPIRICAL AUDIT]
+Question: When looking at a metric or trend, I instinctively inspect the sample size, outlier distribution, and whether correlation is masquerading as causation.
+WHY: Empirical skepticism prevents building predictive models on statistical noise.
+GATE IF LOW: Data Scientist
+
+FEATURE 11: MODEL BUILDING (TECH_MODEL_BUILDING)
+S2-Q21 [TECH_MODEL_BUILDING - ALGORITHMS]
+Question: Training, tuning, and evaluating machine learning models (like Random Forests, Gradient Boosters, or Neural Networks) to solve real business problems sounds exciting.
+WHY: Machine learning model experimentation is the primary role function of a Data Scientist.
+GATE IF LOW: Data Scientist
+
+S2-Q22 [TECH_MODEL_BUILDING - ERROR ANALYSIS]
+Question: Inspecting the confusion matrix to discover why an algorithm misclassified 50 edge cases out of 1,000, and re-engineering features to fix it, sounds rewarding.
+WHY: Model diagnostics and feature engineering consume 80% of an effective Data Scientist\'s time.
+GATE IF LOW: Data Scientist
+
+FEATURE 12: DATA PIPELINES (TECH_DATA_PIPELINE)
+S2-Q23 [TECH_DATA_PIPELINE - STREAMING & ETL]
+Question: Building pipelines that ingest, transform, and clean millions of streaming events per hour (using tools like Kafka, Spark, or dbt) sounds like thrilling engineering.
+WHY: Data ingestion and transformation pipelines form the core domain of Data Engineering.
+GATE IF LOW: Data Engineer
+
+S2-Q24 [TECH_DATA_PIPELINE - DATA INTEGRITY]
+Question: Ensuring that analytical datasets are consistent, deduplicated, and validated against strict schemas before being queried by downstream analysts sounds satisfying.
+WHY: Data stewardship separates disciplined Data Engineers from unstructured hobbyist coders.
+GATE IF LOW: Data Engineer
+
+FEATURE 13: MOBILE CLIENT (TECH_MOBILE_CLIENT)
+S2-Q25 [TECH_MOBILE_CLIENT - PLATFORM]
+Question: Building native mobile applications that respect strict device constraints - battery conservation, memory limits, and offline capability - sounds engaging.
+WHY: Mobile client specialization requires dedication to device-specific runtime constraints.
+GATE IF LOW: Android Developer
+
+S2-Q26 [TECH_MOBILE_CLIENT - NATIVE ECOSYSTEM]
+Question: Mastering the native mobile ecosystem (Kotlin, Android Jetpack Compose, background services, and Google Play guidelines) sounds like a compelling specialization.
+WHY: Native platform commitment distinguishes Android specialists from generic web developers.
+GATE IF LOW: Android Developer
+
+FEATURE 14: THREAT ANALYSIS (TECH_THREAT_ANALYSIS)
+S2-Q27 [TECH_THREAT_ANALYSIS - ADVERSARIAL MINDSET]
+Question: When looking at any software architecture or user input form, my first thought is: \'How could an attacker exploit this to inject commands or exfiltrate data?\'
+WHY: Adversarial perspective is the cognitive engine of Cybersecurity.
+GATE IF LOW: Cybersecurity Engineer
+
+S2-Q28 [TECH_THREAT_ANALYSIS - VULNERABILITY AUDIT]
+Question: Researching Common Vulnerabilities and Exposures (CVEs) and reverse-engineering how a security flaw works in practice sounds genuinely exciting.
+WHY: Vulnerability research is the bread and butter of offensive and application security.
+GATE IF LOW: Cybersecurity Engineer
+
+FEATURE 15: SYSTEM HARDENING (TECH_SYSTEM_HARDENING)
+S2-Q29 [TECH_SYSTEM_HARDENING - DEFENSIVE POSTURE]
+Question: Implementing least-privilege access controls, TLS certificates, mutual authentication, and cryptographic key rotation to lock down systems sounds satisfying.
+WHY: System hardening is the defensive core of enterprise Cybersecurity and Cloud Security.
+GATE IF LOW: Cybersecurity Engineer
+
+S2-Q30 [TECH_SYSTEM_HARDENING - COMPLIANCE]
+Question: Reviewing system configurations and audit logs to verify that servers comply with strict security standards and zero-trust policies sounds worthwhile.
+WHY: Defensive compliance and policy enforcement are critical operational cybersecurity responsibilities.
+GATE IF LOW: Cybersecurity Engineer
+
+FEATURE 16: TEST DESIGN (TECH_TEST_DESIGN)
+S2-Q31 [TECH_TEST_DESIGN - EDGE CASES]
+Question: Figuring out bizarre, unlikely input scenarios and boundary conditions that developers failed to anticipate, causing the software to crash, gives me satisfaction.
+WHY: Test design and boundary value analysis form the intellectual core of QA Engineering.
+GATE IF LOW: QA / Test Automation Engineer
+
+S2-Q32 [TECH_TEST_DESIGN - COVERAGE MATRIX]
+Question: Structuring a comprehensive test plan that systematically maps user requirements to test cases to guarantee that no regression reaches production sounds satisfying.
+WHY: Test matrix management ensures software reliability and release quality.
+GATE IF LOW: QA / Test Automation Engineer
+
+FEATURE 17: TEST AUTOMATION (TECH_TEST_AUTOMATION)
+S2-Q33 [TECH_TEST_AUTOMATION - TEST SCRIPTS]
+Question: Writing robust automated end-to-end test suites (using tools like Playwright, Cypress, or Selenium) that simulate user interactions sounds exciting.
+WHY: Automation separates manual QA testers from high-impact Test Automation Engineers.
+GATE IF LOW: QA / Test Automation Engineer
+
+S2-Q34 [TECH_TEST_AUTOMATION - FLAKY TESTS]
+Question: Investigating why an automated test occasionally fails in CI due to timing differences or network latency and refactoring it to be deterministic sounds satisfying.
+WHY: Flaky test remediation is the most challenging technical hurdle in test automation.
+GATE IF LOW: QA / Test Automation Engineer
+
+FEATURE 18: OBSERVABILITY (TECH_OBSERVABILITY)
+S2-Q35 [TECH_OBSERVABILITY - METRICS & TRACING]
+Question: Setting up real-time dashboards (Prometheus, Grafana, Datadog) and distributed tracing to monitor latency and error rates across microservices sounds interesting.
+WHY: Observability gives visibility into distributed system health; essential for DevOps and Backend.
+GATE IF LOW: DevOps Engineer, Backend Developer
+
+S2-Q36 [TECH_OBSERVABILITY - INCIDENT RESPONSE]
+Question: Analyzing server logs, APM traces, and telemetry data during an active outage to pinpoint the exact root cause of a latency spike sounds like a challenge I would enjoy.
+WHY: Production triage and root-cause analysis define senior operational engineering.
+STRENGTHENS: DevOps Engineer, Cloud Engineer, Backend Developer
+
+FEATURE 19: PERFORMANCE OPTIMIZATION (TECH_PERF_OPTIM)
+S2-Q37 [TECH_PERF_OPTIM - PROFILING]
+Question: Attaching a CPU/memory profiler to an application to detect memory leaks, garbage collection pauses, or thread contention sounds like a deeply engaging technical task.
+WHY: Systems profiling and resource efficiency separate generalists from senior performance engineers.
+STRENGTHENS: Backend Developer, Android Developer, Cloud Engineer
+
+S2-Q38 [TECH_PERF_OPTIM - DISTRIBUTED TRADEOFFS]
+Question: I enjoy reasoning through the trade-offs between cache invalidation strategies, network latency, and eventual consistency when scaling systems.
+WHY: Deep distributed systems principles are needed for high-scale Backend and Cloud engineering.
+STRENGTHENS: Backend Developer, Cloud Engineer, Data Engineer
+
+FEATURE 20: FULL SPECTRUM DELIVERY (TECH_FULL_SPECTRUM)
+S2-Q39 [TECH_FULL_SPECTRUM - END TO END]
+Question: I get more fulfillment from shipping a complete, working product by writing both the frontend interface and the backend API myself than from focusing on one side.
+WHY: The defining signature of a Full Stack Developer: breadth, autonomy, and end-to-end ownership.
+GATE IF LOW: Full Stack Developer
+
+S2-Q40 [TECH_FULL_SPECTRUM - VELOCITY OVER PERFECTION]
+Question: I would rather pick an existing library or framework to get a customer feature working quickly than spend three days writing a custom, theoretically pure solution.
+WHY: Pragmatic product velocity separates Full Stack developers from specialized infrastructure purists.
+STRENGTHENS: Full Stack Developer
+
+======================================================================
+SECTION 3 - ROLE-PAIR DISCRIMINATORS (12 questions, CONDITIONAL)
+FSM: SECTION_3_PAIR_DISCRIMINATORS | 6 Competing Pairs x 2 Questions
+Triggered dynamically ONLY when both roles in the pair are tied in the candidate set.
+If 1 clear winner exists, S3 is bypassed (0 questions asked).
+======================================================================
+
+PAIR A: BACKEND DEVELOPER vs FULL STACK DEVELOPER
+Trigger: requires_both[Backend Developer, Full Stack Developer]
+
+S3-Q01 [PAIR A - BREADTH vs DEPTH]
+Question: I would rather have broad competence across the full stack to build end-to-end products independently, than deep expertise in database internals and distributed locking.
+AGREE -> Full Stack Developer | DISAGREE -> Backend Developer
+
+S3-Q02 [PAIR A - PRODUCT IMPACT vs ARCHITECTURAL PURITY]
+Question: Seeing real users interact with features I built matters more to me than whether the underlying server architecture is mathematically elegant.
+AGREE -> Full Stack Developer | DISAGREE -> Backend Developer
+
+PAIR B: FRONTEND DEVELOPER vs ANDROID DEVELOPER
+Trigger: requires_both[Frontend Developer, Android Developer]
+
+S3-Q03 [PAIR B - WEB vs NATIVE APP STORE]
+Question: I prefer building for the open web - with browsers, instant deployments, and cross-platform URLs - over packaging releases for mobile app stores.
+AGREE -> Frontend Developer | DISAGREE -> Android Developer
+
+S3-Q04 [PAIR B - HARDWARE SENSORS vs BROWSER APIS]
+Question: Integrating mobile hardware (camera, GPS, Bluetooth, biometric sensors) into an app sounds more appealing than optimizing desktop responsive web layouts.
+AGREE -> Android Developer | DISAGREE -> Frontend Developer
+
+PAIR C: DEVOPS ENGINEER vs CLOUD ENGINEER
+Trigger: requires_both[DevOps Engineer, Cloud Engineer]
+
+S3-Q05 [PAIR C - PROCESS vs PLATFORM TOPOLOGY]
+Question: I am more interested in accelerating developer delivery pipelines (CI/CD, automated testing, release velocity) than in designing multi-region cloud VPC architectures.
+AGREE -> DevOps Engineer | DISAGREE -> Cloud Engineer
+
+S3-Q06 [PAIR C - INFRASTRUCTURE AS CODE vs PIPELINE AUTOMATION]
+Question: Writing Terraform templates to provision cloud clusters and load balancers excites me more than configuring automated build and deployment pipelines.
+AGREE -> Cloud Engineer | DISAGREE -> DevOps Engineer
+
+PAIR D: DATA SCIENTIST vs DATA ENGINEER
+Trigger: requires_both[Data Scientist, Data Engineer]
+
+S3-Q07 [PAIR D - INSIGHT vs PLUMBING]
+Question: I would rather discover a non-obvious statistical correlation that guides business strategy than build the distributed pipeline that reliably imports the data.
+AGREE -> Data Scientist | DISAGREE -> Data Engineer
+
+S3-Q08 [PAIR D - MODEL ACCURACY vs LATENCY/THROUGHPUT]
+Question: If a machine learning model achieves 90% accuracy, my priority is improving it to 94%, rather than optimizing its execution latency to under 10 milliseconds.
+AGREE -> Data Scientist | DISAGREE -> Data Engineer
+
+PAIR E: CYBERSECURITY ENGINEER vs QA / TEST AUTOMATION ENGINEER
+Trigger: requires_both[Cybersecurity Engineer, QA / Test Automation Engineer]
+
+S3-Q09 [PAIR E - MALICIOUS EXPLOITATION vs USER SPECIFICATION]
+Question: I am more excited by probing how a malicious hacker could break into a system than by verifying that application buttons and forms adhere to product specifications.
+AGREE -> Cybersecurity Engineer | DISAGREE -> QA / Test Automation Engineer
+
+S3-Q10 [PAIR E - BREACH PROTECTION vs DAILY RELIABILITY]
+Question: Preventing an external data breach or ransomware threat matters more to me than ensuring an application never crashes during standard user workflows.
+AGREE -> Cybersecurity Engineer | DISAGREE -> QA / Test Automation Engineer
+
+PAIR F: FULL STACK DEVELOPER vs FRONTEND DEVELOPER
+Trigger: requires_both[Full Stack Developer, Frontend Developer]
+
+S3-Q11 [PAIR F - VISUAL POLISH vs FUNCTIONAL COMPLETION]
+Question: I would rather spend an extra day perfecting micro-interactions and CSS transitions than spend that day integrating the frontend with database queries and authentication tokens.
+AGREE -> Frontend Developer | DISAGREE -> Full Stack Developer
+
+S3-Q12 [PAIR F - DATABASE & SERVER TOLERANCE]
+Question: I feel frustrated when required to write database queries or configure backend server routes - I prefer staying exclusively in the UI component and layout layer.
+AGREE -> Frontend Developer | DISAGREE -> Full Stack Developer
+
+======================================================================
+SECTION 4 - SPECIALIST PROBES (16 questions, CONDITIONAL)
+FSM: SECTION_4_SPECIALIST_PROBES | 4 Specialist Roles x 4 Questions
+Triggered ONLY if the specialist role is in the top-3 candidate set after S2/S3.
+Specialist Roles: Data Scientist, Data Engineer, Cybersecurity Engineer, DevOps Engineer
+Generalist Roles (No S4 probes): Frontend, Android, Backend, Full Stack, QA, Cloud
+======================================================================
+
+DATA SCIENTIST PROBE (Trigger: requires_any[Data Scientist])
+S4-Q01 [DS - MATHEMATICAL RIGOR]
+Question: When an algorithm gives surprising outputs, I instinctively reach for probability theory or linear algebra to inspect why, rather than just switching libraries.
+S4-Q02 [DS - EXPERIMENTAL RESILIENCE]
+Question: I am comfortable with the reality that 70% of exploratory data science hypotheses fail, and proving what does not work is still valuable progress.
+S4-Q03 [DS - DATA SKEPTICISM]
+Question: My immediate reflex when receiving a dataset is to audit missing values, sampling bias, and label leakage before writing any modeling code.
+S4-Q04 [DS - EXECUTIVE STORYTELLING]
+Question: I enjoy translating complex technical models into clear, intuitive visual dashboards and narratives that non-technical leaders can confidently make decisions on.
+
+DATA ENGINEER PROBE (Trigger: requires_any[Data Engineer])
+S4-Q05 [DE - SCHEMA GOVERNANCE]
+Question: I care deeply about strict schema enforcement, data contracts, and ensuring that upstream API updates never break downstream analytical data pipelines.
+S4-Q06 [DE - DISTRIBUTED COMPUTING]
+Question: Architecting a Spark or Flink cluster to process terabytes of event logs in parallel sounds more exciting than tuning hyper-parameters on a single machine.
+S4-Q07 [DE - IDEMPOTENCY & FAULT TOLERANCE]
+Question: When designing an ETL pipeline, I spend as much energy designing automated retries, checkpointing, and idempotent reruns as I do on the happy path.
+S4-Q08 [DE - ADVANCED ANALYTICAL SQL]
+Question: I genuinely enjoy writing complex analytical SQL - using window functions, partition clauses, and recursive CTEs - to aggregate data directly in the database.
+
+CYBERSECURITY ENGINEER PROBE (Trigger: requires_any[Cybersecurity Engineer])
+S4-Q09 [CYBER - FORENSIC PATIENCE]
+Question: I have the persistence to comb through thousands of lines of network packet captures, memory dumps, or auth logs to hunt down a single subtle anomaly.
+S4-Q10 [CYBER - OFFENSIVE INSTINCT]
+Question: When using any software, I instinctively test input fields for boundary flaws like SQL injection, cross-site scripting, and unauthorized path traversals.
+S4-Q11 [CYBER - REMEDIATION MINDSET]
+Question: After finding a critical vulnerability, I am just as motivated to design and verify the architectural fix as I was to discover the exploit.
+S4-Q12 [CYBER - USABILITY HARMONY]
+Question: I believe security policies must be designed to empower everyday users, avoiding overly restrictive hurdles that tempt employees to bypass controls.
+
+DEVOPS ENGINEER PROBE (Trigger: requires_any[DevOps Engineer])
+S4-Q13 [DEVOPS - RAPID FEEDBACK LOOPS]
+Question: I believe a high-performing engineering organization should enable developers to push code to production-like environments in under fifteen minutes safely.
+S4-Q14 [DEVOPS - BLAMELESS OPERATIONAL CULTURE]
+Question: When a production incident occurs, my focus is immediately on fixing the system vulnerability and updating automated safeguards, rather than blaming individual developers.
+S4-Q15 [DEVOPS - INFRASTRUCTURE AS CODE]
+Question: I strongly believe that every server, firewall rule, and cluster configuration must be declared in version-controlled code, forbidding manual configuration changes in production.
+S4-Q16 [DEVOPS - AUTOMATION PAYOFF]
+Question: I am eager to spend two days writing an automated deployment pipeline to eliminate a repetitive task that currently takes thirty minutes manually.
+
+======================================================================
+ASSESSMENT SUMMARY METRICS
+======================================================================
+- Section 1 (Personality & Psychometrics): 16 questions (MANDATORY)
+- Section 2 (Technical Core Scan):        40 questions (MANDATORY / DYNAMIC, 20 features x 2)
+- Section 3 (Role-Pair Discriminators):   0 - 12 questions (CONDITIONAL, 6 pairs x 2)
+- Section 4 (Specialist Probes):          0 - 16 questions (CONDITIONAL, 4 roles x 4)
+
+- Maximum Assessment Path: 84 questions (extreme multi-way tie)
+- Standard Baseline Path:   56 questions (Section 1 + Section 2)
+- Adaptive Optimized Path: 44 - 52 questions (with early-exit resolving on high-confidence signals)
+
+Exact 20-Feature Technical Input Vector:
+[0]  SERVER     (TECH_SERVER_LOGIC)
+[1]  STORAGE    (TECH_DATA_STORAGE)
+[2]  API        (TECH_API_DESIGN)
+[3]  UI         (TECH_UI_RENDERING)
+[4]  STATE      (TECH_STATE_MGMT)
+[5]  BUILD      (TECH_BUILD_PIPELINE)
+[6]  INFRA      (TECH_INFRA_PROVISION)
+[7]  CONTAINER  (TECH_CONTAINER_ORCH)
+[8]  CLOUD      (TECH_CLOUD_SERVICES)
+[9]  STATS      (TECH_STAT_ANALYSIS)
+[10] MODEL      (TECH_MODEL_BUILDING)
+[11] PIPELINE   (TECH_DATA_PIPELINE)
+[12] MOBILE     (TECH_MOBILE_CLIENT)
+[13] THREAT     (TECH_THREAT_ANALYSIS)
+[14] HARDENING  (TECH_SYSTEM_HARDENING)
+[15] TESTDES    (TECH_TEST_DESIGN)
+[16] TESTAUTO   (TECH_TEST_AUTOMATION)
+[17] OBSERV     (TECH_OBSERVABILITY)
+[18] PERF       (TECH_PERF_OPTIM)
+[19] FULLSPEC   (TECH_FULL_SPECTRUM)
