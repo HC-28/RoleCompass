@@ -1,4 +1,10 @@
+# Backend build context exclusions
 target/
 .git/
+.gitignore
 .idea/
 *.log
+*.md
+mvnw
+mvnw.cmd
+.mvn/

@@ -1,9 +1,12 @@
-version: '3.9'
-
 # ==============================================================================
 # RoleCompass — Full Stack Docker Compose
-# Starts all 4 services with health checks and correct startup order.
 # Usage: docker compose up --build
+#
+# Service startup order:
+#   db (healthy) → ml (healthy) → backend (healthy) → frontend
+#
+# All secrets are loaded from the .env file in this directory.
+# Copy .env.example → .env and adjust values before running.
 # ==============================================================================
 
 services:
@@ -14,15 +17,15 @@ services:
     container_name: rolecompass_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: rolecompass
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB:       rolecompass
+      POSTGRES_USER:     ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d rolecompass"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d rolecompass"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -57,12 +60,12 @@ services:
       ml:
         condition: service_healthy
     environment:
-      DB_URL: jdbc:postgresql://db:5432/rolecompass
-      DB_USERNAME: postgres
-      DB_PASSWORD: password
-      PORT: 8080
-      ML_SERVICE_URL: http://ml:8000
-      JWT_SECRET_KEY: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      DB_URL:          jdbc:postgresql://db:5432/rolecompass
+      DB_USERNAME:     ${DB_USERNAME:-postgres}
+      DB_PASSWORD:     ${DB_PASSWORD:-password}
+      PORT:            8080
+      ML_SERVICE_URL:  http://ml:8000
+      JWT_SECRET_KEY:  ${JWT_SECRET_KEY:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     ports:
       - "8080:8080"
     healthcheck:
@@ -73,6 +76,8 @@ services:
       start_period: 30s
 
   # ── 4. React Frontend (Nginx-served production build) ──────────────────────
+  # Nginx serves the static build AND reverse-proxies /api/* to the backend
+  # container — the browser never needs to know the backend's host address.
   frontend:
     build:
       context: ./frontend
