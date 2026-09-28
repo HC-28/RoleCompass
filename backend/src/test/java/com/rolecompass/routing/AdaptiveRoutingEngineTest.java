@@ -15,6 +15,7 @@ import org.mockito.quality.Strictness;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 
 /**
@@ -217,5 +218,157 @@ class AdaptiveRoutingEngineTest {
         assertThat(decision.readyToPredict()).isTrue();
         assertThat(decision.survivingRoles()).containsExactly("Backend Developer", "Full Stack Developer");
         assertThat(decision.nextFsmState()).isEqualTo(FsmState.COMPLETED);
+    }
+
+    // ─── Option 3 Confidence-Gated Active Learning Tests ───────────────────────
+
+    private RoutingState stateWithOptions(FsmState fsm, List<String> candidates, Double margin, List<String> topRoles) {
+        return new RoutingState(
+                UUID.randomUUID(),
+                fsm,
+                candidates,
+                Map.of(),
+                new double[20],
+                0,
+                Set.of(),
+                Map.of(),
+                new ArrayList<>(),
+                margin,
+                topRoles
+        );
+    }
+
+    @Test
+    @DisplayName("Option 3: Decisive ML confidence (margin >= 0.18) bypasses Section 3 and 4")
+    void option3_decisiveConfidence_bypassesSections3And4() {
+        // High confidence lead: Backend Developer 55%, Runner-up 30% -> margin = 0.25 >= 0.18
+        RoutingState state = stateWithOptions(
+                FsmState.RESOLVER_EVALUATION,
+                List.of("DevOps Engineer", "Cloud Engineer"),
+                0.25,
+                List.of("DevOps Engineer", "Cloud Engineer")
+        );
+
+        RoutingDecision decision = engine.evaluate(state);
+
+        assertThat(decision.readyToPredict()).isTrue();
+        assertThat(decision.nextFsmState()).isEqualTo(FsmState.TERMINAL_SCORING);
+        assertThat(decision.nextQuestionIds()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Option 3: Close tie / ambiguous confidence (margin < 0.18) fires Section 3 Resolvers")
+    void option3_ambiguousConfidence_firesSection3Resolvers() {
+        // Close tie: DevOps 40%, Cloud 37% -> margin = 0.03 < 0.18
+        RoutingState state = stateWithOptions(
+                FsmState.RESOLVER_EVALUATION,
+                List.of("DevOps Engineer", "Cloud Engineer"),
+                0.03,
+                List.of("DevOps Engineer", "Cloud Engineer")
+        );
+
+        RoutingDecision decision = engine.evaluate(state);
+
+        assertThat(decision.readyToPredict()).isFalse();
+        assertThat(decision.nextFsmState()).isEqualTo(FsmState.SECTION_3_RESOLVER);
+        // q4 (301L) has requires_both: [DevOps Engineer, Cloud Engineer]
+        assertThat(decision.nextQuestionIds()).contains(301L);
+    }
+
+    @Test
+    @DisplayName("Option 3: Close tie / ambiguous confidence with no Section 3 resolver fires Section 4 Specialist Probes")
+    void option3_ambiguousConfidence_noResolver_firesSection4Probes() {
+        // Ambiguous tie: Data Engineer 36%, Backend Developer 34% -> margin = 0.02 < 0.18
+        // No Section 3 pair resolver exists for Data Engineer & Backend Developer in mock setup,
+        // but Data Engineer is a Section 4 specialist role.
+        RoutingState state = stateWithOptions(
+                FsmState.RESOLVER_EVALUATION,
+                List.of("Data Engineer", "Backend Developer"),
+                0.02,
+                List.of("Data Engineer", "Backend Developer")
+        );
+
+        RoutingDecision decision = engine.evaluate(state);
+
+        assertThat(decision.readyToPredict()).isFalse();
+        assertThat(decision.nextFsmState()).isEqualTo(FsmState.SECTION_4_SPECIALIST);
+        // q5 (401L) has requires_any: [Data Engineer, Backend Developer, Data Scientist]
+        assertThat(decision.nextQuestionIds()).contains(401L);
+    }
+
+    @Test
+    @DisplayName("Option 3: ML service is dynamically called at RESOLVER_EVALUATION to query confidence margin")
+    void option3_dynamicMlCallAtResolverEvaluation() {
+        com.rolecompass.service.MlClientService mockMl = org.mockito.Mockito.mock(com.rolecompass.service.MlClientService.class);
+        AdaptiveRoutingEngine engineWithMl = new AdaptiveRoutingEngine(questionRepository, mockMl);
+
+        // Mock ML response: Decisive lead for DevOps Engineer (55% vs 30% -> margin 0.25)
+        com.rolecompass.dto.response.PredictionResponse mlResponse = com.rolecompass.dto.response.PredictionResponse.builder()
+                .predictedRole("DevOps Engineer")
+                .confidence(0.55)
+                .alternates(List.of(
+                        com.rolecompass.dto.response.PredictionResponse.AlternateRole.builder()
+                                .role("Cloud Engineer")
+                                .confidence(0.30)
+                                .build()
+                ))
+                .build();
+
+        org.mockito.Mockito.when(mockMl.score(any(double[].class), any())).thenReturn(mlResponse);
+
+        // State has null margin (initial state arriving at RESOLVER_EVALUATION)
+        RoutingState state = stateWithOptions(
+                FsmState.RESOLVER_EVALUATION,
+                List.of("DevOps Engineer", "Cloud Engineer"),
+                null,
+                null
+        );
+
+        RoutingDecision decision = engineWithMl.evaluate(state);
+
+        // Verify ML was called with the exact candidate roles and tech vector
+        org.mockito.Mockito.verify(mockMl).score(state.techVector(), state.candidateRoles());
+
+        // Because margin is 0.25 >= 0.18, decisive bypass should fire
+        assertThat(decision.readyToPredict()).isTrue();
+        assertThat(decision.nextFsmState()).isEqualTo(FsmState.TERMINAL_SCORING);
+    }
+
+    @Test
+    @DisplayName("Option 3: ML service is dynamically called at advanceFromResolver to check if tie was resolved")
+    void option3_dynamicMlCallAtAdvanceFromResolver() {
+        com.rolecompass.service.MlClientService mockMl = org.mockito.Mockito.mock(com.rolecompass.service.MlClientService.class);
+        AdaptiveRoutingEngine engineWithMl = new AdaptiveRoutingEngine(questionRepository, mockMl);
+
+        // Mock ML response after resolvers: now decisive (Data Engineer 60% vs Backend 35% -> margin 0.25)
+        com.rolecompass.dto.response.PredictionResponse resolvedMl = com.rolecompass.dto.response.PredictionResponse.builder()
+                .predictedRole("Data Engineer")
+                .confidence(0.60)
+                .alternates(List.of(
+                        com.rolecompass.dto.response.PredictionResponse.AlternateRole.builder()
+                                .role("Backend Developer")
+                                .confidence(0.35)
+                                .build()
+                ))
+                .build();
+
+        org.mockito.Mockito.when(mockMl.score(any(double[].class), any())).thenReturn(resolvedMl);
+
+        // Section 3 has completed (all resolver questions answered)
+        RoutingState state = stateWithOptions(
+                FsmState.SECTION_3_RESOLVER,
+                List.of("Data Engineer", "Backend Developer"),
+                null,
+                null
+        );
+
+        RoutingDecision decision = engineWithMl.evaluate(state);
+
+        // Verify ML re-scoring was called
+        org.mockito.Mockito.verify(mockMl).score(state.techVector(), state.candidateRoles());
+
+        // Because margin is now 0.25 >= 0.18, Section 4 specialist probes are skipped
+        assertThat(decision.readyToPredict()).isTrue();
+        assertThat(decision.nextFsmState()).isEqualTo(FsmState.TERMINAL_SCORING);
     }
 }

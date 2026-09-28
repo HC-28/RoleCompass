@@ -60,9 +60,38 @@ public record RoutingState(
          * Entries are plain-English EliminatedRole records that will be
          * included in the final PredictionResponse.
          */
-        List<EliminatedRole> eliminationLog
+        List<EliminatedRole> eliminationLog,
+
+        /**
+         * Optional: Confidence margin (P(Top 1) - P(Top 2)) evaluated by the ML service
+         * right after Section 2. If margin >= 0.18, the top role is decisive.
+         * If margin < 0.18, multiple roles have similar confidence, triggering Section 3 & 4.
+         */
+        Double mlConfidenceMargin,
+
+        /**
+         * Top candidate roles from intermediate ML preview scoring [Top1, Top2].
+         */
+        List<String> mlTopRoles
 
 ) {
+    /**
+     * Backwards-compatible canonical constructor without intermediate ML preview fields.
+     */
+    public RoutingState(
+            UUID sessionId,
+            FsmState fsmState,
+            List<String> candidateRoles,
+            Map<String, Double> psychProfile,
+            double[] techVector,
+            int answeredCount,
+            Set<Long> answeredQuestionIds,
+            Map<Long, Integer> rawAnswers,
+            List<EliminatedRole> eliminationLog
+    ) {
+        this(sessionId, fsmState, candidateRoles, psychProfile, techVector, answeredCount,
+             answeredQuestionIds, rawAnswers, eliminationLog, null, null);
+    }
     /** All 10 role names in canonical order (matches AGENTS.md). */
     public static final List<String> ALL_ROLES = List.of(
             "Backend Developer",
@@ -136,7 +165,7 @@ public record RoutingState(
         return new RoutingState(
                 sessionId, newFsm, new ArrayList<>(newCandidates),
                 psychProfile, techVector, answeredCount, answeredQuestionIds,
-                rawAnswers, new ArrayList<>(eliminationLog)
+                rawAnswers, new ArrayList<>(eliminationLog), mlConfidenceMargin, mlTopRoles
         );
     }
 
@@ -151,7 +180,18 @@ public record RoutingState(
         return new RoutingState(
                 sessionId, fsmState, new ArrayList<>(candidateRoles),
                 psychProfile, techVector, answeredCount, answeredQuestionIds,
-                rawAnswers, merged
+                rawAnswers, merged, mlConfidenceMargin, mlTopRoles
+        );
+    }
+
+    /**
+     * Returns a new RoutingState with updated ML confidence preview margin and top roles.
+     */
+    public RoutingState withMlPreview(Double margin, List<String> topRoles) {
+        return new RoutingState(
+                sessionId, fsmState, new ArrayList<>(candidateRoles),
+                psychProfile, techVector, answeredCount, answeredQuestionIds,
+                rawAnswers, new ArrayList<>(eliminationLog), margin, topRoles
         );
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,9 +39,14 @@ public class QuestionService {
         if (questionIds == null || questionIds.isEmpty()) {
             return List.of();
         }
-        return questionRepository.findAllById(questionIds)
-                .stream()
-                .map(this::toDTO)
+        // Build an ordered lookup list so we preserve the routing engine's intended order.
+        // findAllById does NOT guarantee insertion-order, so we re-sort to match questionIds.
+        List<Long> orderedIds = questionIds instanceof List ? (List<Long>) questionIds : new java.util.ArrayList<>(questionIds);
+        Map<Long, Question> byId = questionRepository.findAllById(orderedIds).stream()
+                .collect(Collectors.toMap(Question::getId, q -> q));
+        return orderedIds.stream()
+                .filter(byId::containsKey)
+                .map(id -> toDTO(byId.get(id)))
                 .collect(Collectors.toList());
     }
 

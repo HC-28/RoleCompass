@@ -340,7 +340,7 @@ public class SessionService {
 
         return new RoutingState(
                 sessionId, fsmState, candidateNames, psychProfile,
-                techVector, answeredCount, answeredQuestionIds, rawAnswers, existingLog);
+                techVector, answeredCount, answeredQuestionIds, rawAnswers, existingLog, null, null);
     }
 
     /**

@@ -43,12 +43,15 @@ public class DataSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (questionRepository.count() > 0) {
-            log.info("Questions already seeded ({} found). Skipping DataSeeder.", questionRepository.count());
+        long count = questionRepository.count();
+        if (count == 84) {
+            log.info("All 84 RoleCompass questions already seeded. Skipping DataSeeder.");
             return;
         }
 
-        log.info("Seeding RoleCompass questions for the first time...");
+        log.info("Expected 84 questions but found {}. Seeding RoleCompass questions cleanly...", count);
+        answerRepository.deleteAllInBatch();
+        questionRepository.deleteAllInBatch();
 
         List<Question> all = new ArrayList<>();
         all.addAll(buildSection1());

@@ -53,7 +53,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AdaptiveRoutingEngine {
 
     // ─── Constants ────────────────────────────────────────────────────────────
@@ -95,6 +94,15 @@ public class AdaptiveRoutingEngine {
     static final int ADAPTIVE_EXTREME_LOW  = SCORE_LOW;
     static final int ADAPTIVE_EXTREME_HIGH = SCORE_HIGH;
 
+    /**
+     * Option 3 Active Learning Threshold:
+     * When top-1 and runner-up ML confidence margin is < 0.18 (multiple roles have
+     * similar and high confidence), Section 3 resolvers and Section 4 specialist probes
+     * are fired to resolve the ambiguity.
+     * When margin >= 0.18, the model has a decisive winner and we bypass Section 3 & 4.
+     */
+    public static final double ML_DECISIVE_MARGIN_THRESHOLD = 0.18;
+
     // Psychometric dimension tag names (must match FeatureIndex constants)
     private static final String DIM_R  = FeatureIndex.TAG_DIM_REALISTIC;
     private static final String DIM_I  = FeatureIndex.TAG_DIM_INVESTIGATIVE;
@@ -126,6 +134,20 @@ public class AdaptiveRoutingEngine {
     );
 
     private final QuestionRepository questionRepository;
+    private final com.rolecompass.service.MlClientService mlClientService;
+
+    public AdaptiveRoutingEngine(QuestionRepository questionRepository) {
+        this(questionRepository, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AdaptiveRoutingEngine(
+            QuestionRepository questionRepository,
+            @org.springframework.lang.Nullable com.rolecompass.service.MlClientService mlClientService
+    ) {
+        this.questionRepository = questionRepository;
+        this.mlClientService = mlClientService;
+    }
 
     // ─── Gate Result (survivors + elimination log from one gate pass) ─────────
 
@@ -264,18 +286,57 @@ public class AdaptiveRoutingEngine {
     }
 
     private RoutingDecision handleResolverEvaluation(RoutingState state) {
+        // OPTION 3 (Confidence-Gated Active Learning):
+        // If ML margin is not yet computed, query the ML service on surviving candidates
+        if (state.mlConfidenceMargin() == null && mlClientService != null) {
+            try {
+                var preview = mlClientService.score(state.techVector(), state.candidateRoles());
+                if (preview != null && preview.getConfidence() != null) {
+                    double topConf = preview.getConfidence();
+                    double runnerUpConf = 0.0;
+                    String runnerUpRole = null;
+                    if (preview.getAlternates() != null && !preview.getAlternates().isEmpty()) {
+                        runnerUpConf = preview.getAlternates().get(0).getConfidence();
+                        runnerUpRole = preview.getAlternates().get(0).getRole();
+                    }
+                    double margin = topConf - runnerUpConf;
+                    List<String> topRoles = runnerUpRole != null
+                            ? List.of(preview.getPredictedRole(), runnerUpRole)
+                            : List.of(preview.getPredictedRole());
+                    log.info("ML Confidence Preview at RESOLVER_EVALUATION for session {}: Top='{}' ({}), RunnerUp='{}' ({}), Margin={}",
+                            state.sessionId(), preview.getPredictedRole(), String.format("%.1f%%", topConf * 100),
+                            runnerUpRole != null ? runnerUpRole : "none", String.format("%.1f%%", runnerUpConf * 100),
+                            String.format("%.3f", margin));
+                    state = state.withMlPreview(margin, topRoles);
+                }
+            } catch (Exception e) {
+                log.warn("ML preview scoring offline for session {}: {}", state.sessionId(), e.getMessage());
+            }
+        }
+
+        // If intermediate ML scoring is decisive (margin >= 0.18), one role is clearly ahead.
+        // Bypass Sections 3 and 4 directly to TERMINAL_SCORING.
+        if (state.mlConfidenceMargin() != null && state.mlConfidenceMargin() >= ML_DECISIVE_MARGIN_THRESHOLD) {
+            log.info("Decisive ML confidence margin ({}) detected for session {}. Bypassing Section 3 & 4 resolvers.",
+                    String.format("%.3f", state.mlConfidenceMargin()), state.sessionId());
+            return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING);
+        }
+
+        // Multiple roles have similar and high confidence (margin < 0.18) or ML offline:
+        // Section 3 (resolvers) and Section 4 (specialists) must be fired to break the tie.
         List<Long> applicableResolvers = getApplicableResolverQuestions(state);
 
         if (!applicableResolvers.isEmpty()) {
-            log.info("Tie detected for session {}. Advancing to SECTION_3_RESOLVER with {} questions.",
+            log.info("Close tie detected (margin={}) for session {}. Advancing to SECTION_3_RESOLVER with {} questions.",
+                    state.mlConfidenceMargin() != null ? String.format("%.3f", state.mlConfidenceMargin()) : "offline",
                     state.sessionId(), applicableResolvers.size());
             List<Long> batch = applicableResolvers.stream().limit(BATCH_SIZE).collect(Collectors.toList());
             return RoutingDecision.continueWith(
                     state.candidateRoles(), batch, FsmState.SECTION_3_RESOLVER,
-                    "Tie exists between candidates. Serving resolver questions.");
+                    "High ambiguity between top candidates. Serving resolver questions to break tie.");
         }
 
-        // No tie — check if Section 4 specialist gate opens
+        // No pairwise resolver questions applicable — advance to Section 4 specialist probes
         return advanceFromResolver(state);
     }
 
@@ -294,28 +355,80 @@ public class AdaptiveRoutingEngine {
     private RoutingDecision handleSection4(RoutingState state) {
         // Only serve specialist probe questions applicable to surviving candidates
         Set<String> candidates = new HashSet<>(state.candidateRoles());
-        List<Long> unanswered = questionRepository.findBySectionIdOrderByIdAsc(4).stream()
+        List<Question> candidateQuestions = questionRepository.findBySectionIdOrderByIdAsc(4).stream()
                 .filter(q -> !state.answeredQuestionIds().contains(q.getId()))
                 .filter(q -> isTriggerSatisfied(q.getTriggerPredicate(), candidates))
-                .map(Question::getId)
                 .collect(Collectors.toList());
-        if (unanswered.isEmpty()) {
+
+        if (candidateQuestions.isEmpty()) {
             log.info("Section 4 specialist probes complete for session {}. Advancing to TERMINAL_SCORING.", state.sessionId());
             return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING);
         }
-        List<Long> batch = unanswered.stream().limit(BATCH_SIZE).collect(Collectors.toList());
+
+        // Option 3: If top tied roles are available from ML, prioritize probes for those specific roles
+        if (state.mlTopRoles() != null && !state.mlTopRoles().isEmpty()) {
+            Set<String> topRoles = new HashSet<>(state.mlTopRoles());
+            candidateQuestions.sort((q1, q2) -> {
+                boolean q1MatchesTop = isTriggerSatisfied(q1.getTriggerPredicate(), topRoles);
+                boolean q2MatchesTop = isTriggerSatisfied(q2.getTriggerPredicate(), topRoles);
+                if (q1MatchesTop && !q2MatchesTop) return -1;
+                if (!q1MatchesTop && q2MatchesTop) return 1;
+                return Long.compare(q1.getId(), q2.getId());
+            });
+        }
+
+        List<Long> batch = candidateQuestions.stream()
+                .map(Question::getId)
+                .limit(BATCH_SIZE)
+                .collect(Collectors.toList());
+
         return RoutingDecision.continueWith(
                 state.candidateRoles(), batch, FsmState.SECTION_4_SPECIALIST,
                 "Section 4 specialist probes in progress");
     }
 
     private RoutingDecision advanceFromResolver(RoutingState state) {
+        // Re-evaluate ML score after resolver questions to check if the tie is broken
+        if (mlClientService != null) {
+            try {
+                var preview = mlClientService.score(state.techVector(), state.candidateRoles());
+                if (preview != null && preview.getConfidence() != null) {
+                    double topConf = preview.getConfidence();
+                    double runnerUpConf = 0.0;
+                    String runnerUpRole = null;
+                    if (preview.getAlternates() != null && !preview.getAlternates().isEmpty()) {
+                        runnerUpConf = preview.getAlternates().get(0).getConfidence();
+                        runnerUpRole = preview.getAlternates().get(0).getRole();
+                    }
+                    double margin = topConf - runnerUpConf;
+                    List<String> topRoles = runnerUpRole != null
+                            ? List.of(preview.getPredictedRole(), runnerUpRole)
+                            : List.of(preview.getPredictedRole());
+                    log.info("ML Confidence Re-Evaluation after Section 3 for session {}: Top='{}' ({}), RunnerUp='{}' ({}), Margin={}",
+                            state.sessionId(), preview.getPredictedRole(), String.format("%.1f%%", topConf * 100),
+                            runnerUpRole != null ? runnerUpRole : "none", String.format("%.1f%%", runnerUpConf * 100),
+                            String.format("%.3f", margin));
+                    state = state.withMlPreview(margin, topRoles);
+                }
+            } catch (Exception e) {
+                log.debug("ML re-evaluation offline for session {}: {}", state.sessionId(), e.getMessage());
+            }
+        }
+
+        // OPTION 3: If ML confidence is now decisive (margin >= 0.18), skip Section 4 probes
+        if (state.mlConfidenceMargin() != null && state.mlConfidenceMargin() >= ML_DECISIVE_MARGIN_THRESHOLD) {
+            log.info("Decisive ML confidence margin ({}) after Section 3 for session {}. Skipping Section 4 specialist probes.",
+                    String.format("%.3f", state.mlConfidenceMargin()), state.sessionId());
+            return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING);
+        }
+
         boolean section4Opens = state.candidateRoles().stream()
                 .anyMatch(SECTION_4_GATE_ROLES::contains);
 
         if (section4Opens) {
-            log.info("Section 4 specialist gate open for session {} — specialist roles survived: {}",
+            log.info("Section 4 specialist gate open for session {} (margin={}) — specialist roles survived: {}",
                     state.sessionId(),
+                    state.mlConfidenceMargin() != null ? String.format("%.3f", state.mlConfidenceMargin()) : "offline",
                     state.candidateRoles().stream().filter(SECTION_4_GATE_ROLES::contains).collect(Collectors.toList()));
             return continueWithNextState(state, FsmState.SECTION_4_SPECIALIST, state.candidateRoles());
         }
@@ -508,11 +621,24 @@ public class AdaptiveRoutingEngine {
      */
     List<Long> getApplicableResolverQuestions(RoutingState state) {
         Set<String> candidates = new HashSet<>(state.candidateRoles());
-        return questionRepository.findBySectionIdOrderByIdAsc(3).stream()
+        List<Question> candidateQuestions = questionRepository.findBySectionIdOrderByIdAsc(3).stream()
                 .filter(q -> !state.answeredQuestionIds().contains(q.getId()))
                 .filter(q -> isTriggerSatisfied(q.getTriggerPredicate(), candidates))
-                .map(Question::getId)
                 .collect(Collectors.toList());
+
+        // Option 3: If top tied roles are available from ML, prioritize resolver questions for that specific pair
+        if (state.mlTopRoles() != null && state.mlTopRoles().size() >= 2) {
+            Set<String> topTied = new HashSet<>(state.mlTopRoles().subList(0, 2));
+            candidateQuestions.sort((q1, q2) -> {
+                boolean q1MatchesTop = isTriggerSatisfied(q1.getTriggerPredicate(), topTied);
+                boolean q2MatchesTop = isTriggerSatisfied(q2.getTriggerPredicate(), topTied);
+                if (q1MatchesTop && !q2MatchesTop) return -1;
+                if (!q1MatchesTop && q2MatchesTop) return 1;
+                return Long.compare(q1.getId(), q2.getId());
+            });
+        }
+
+        return candidateQuestions.stream().map(Question::getId).collect(Collectors.toList());
     }
 
     /**
