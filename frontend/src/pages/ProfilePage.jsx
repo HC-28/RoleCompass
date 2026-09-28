@@ -7,12 +7,9 @@ import {
   Clock,
   Compass,
   FileQuestion,
-  HelpCircle,
   ListOrdered,
   Mail,
   Play,
-  RotateCcw,
-  Sparkles,
   User as UserIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -201,7 +198,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {sessions.map((session, idx) => {
+              {sessions.map((session) => {
                 const isExpanded = !!expandedSessions[session.session_id]
                 const isCompleted = session.status === 'completed'
                 const qaList = session.questions_and_answers || []

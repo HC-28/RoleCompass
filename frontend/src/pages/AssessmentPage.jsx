@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Play, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Sparkles } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { predict, startSession, submitAnswers } from '../api/session'
@@ -10,58 +10,64 @@ import { extractErrorMessage } from '../utils/validation'
 
 const RESULTS_KEY = 'rolecompass_results'
 
-/**
- * AssessmentPage
- *
- * Orchestrates the full 4-section assessment flow:
- *   - Section 1 (4 questions per batch)
- *   - Section 2 (1 question per API call — adaptive skip fires between each question)
- *   - Section 3 (batch delivery, conditional)
- *   - Section 4 (batch delivery, conditional)
- *
- * Key invariant: `totalAnswered` always reflects cumulative questions answered
- * across all submitted batches. `currentIndex` is the 0-based position within
- * the current in-memory batch. The displayed question number is always:
- *
- *   totalAnswered + currentIndex + 1
- *
- * This is correct even when Section 2 delivers 1 question at a time (batchSize=1,
- * so currentIndex is always 0 during Section 2).
- */
 export default function AssessmentPage() {
   const navigate = useNavigate()
 
-  // 'idle' | 'loading' | 'active' | 'error'
-  const [phase, setPhase] = useState('idle')
+  const [phase, setPhase] = useState('idle') // 'idle' | 'loading' | 'active' | 'error'
   const [sessionId, setSessionId] = useState(null)
-  const [questions, setQuestions] = useState([])       // current in-memory batch
+  const [questions, setQuestions] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [answers, setAnswers] = useState({})           // answers for current batch only
-  const [totalAnswered, setTotalAnswered] = useState(0)// cumulative answered
+  const [answers, setAnswers] = useState({})
+  const [totalAnswered, setTotalAnswered] = useState(0)
   const [fsmState, setFsmState] = useState('SECTION_1_RIASEC')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
-
-  // ─── Derived state ─────────────────────────────────────────────────────────
+  const [showUnansweredWarning, setShowUnansweredWarning] = useState(false)
 
   const currentQuestion = questions[currentIndex]
-  const selectedValue   = currentQuestion ? (answers[currentQuestion.id] ?? null) : null
-  const isLastInBatch   = currentIndex === questions.length - 1
+  const selectedValue = currentQuestion ? (answers[currentQuestion.id] ?? null) : null
+  const isLastInBatch = currentIndex === questions.length - 1
 
-  // Cumulative question number shown to the user (never resets)
+  // ── Batch completion checks ────────────────────────────────────────────────
+  /** True only when every question in the current batch has been answered. */
+  const allBatchAnswered = useMemo(
+    () => questions.length > 0 && questions.every((q) => answers[q.id] != null),
+    [questions, answers],
+  )
+
+  /**
+   * Can navigate to the next question in the batch:
+   * - Current question must be answered.
+   * - Not already on the last question.
+   * - Not submitting.
+   */
+  const canGoNext = useMemo(
+    () => selectedValue !== null && !isLastInBatch && !isSubmitting,
+    [selectedValue, isLastInBatch, isSubmitting],
+  )
+
+  /**
+   * Can submit the batch:
+   * - ALL batch questions must be answered.
+   * - Must be on the last question (otherwise use Next).
+   * - Not already submitting.
+   */
+  const canSubmit = useMemo(
+    () => allBatchAnswered && isLastInBatch && !isSubmitting,
+    [allBatchAnswered, isLastInBatch, isSubmitting],
+  )
+
+  // Progress bar — based on total answered + current position within batch
   const questionNumber = totalAnswered + currentIndex + 1
   const progress = Math.min((questionNumber / ASSESSMENT_BASELINE_TOTAL) * 100, 100)
 
-  const canProceed = useMemo(
-    () => selectedValue !== null && !isSubmitting,
-    [selectedValue, isSubmitting],
+  // How many batch questions still need an answer (for warning display)
+  const unansweredInBatch = useMemo(
+    () => questions.filter((q) => answers[q.id] == null).length,
+    [questions, answers],
   )
 
-  // Subsection label comes from the current question (Section 2 only)
-  const subsectionLabel = currentQuestion?.subsection_label ?? null
-
-  // ─── Session Start ──────────────────────────────────────────────────────────
-
+  // ── Session Start ──────────────────────────────────────────────────────────
   const handleBegin = async () => {
     setPhase('loading')
     setError(null)
@@ -80,45 +86,60 @@ export default function AssessmentPage() {
     }
   }
 
-  // ─── Within-batch navigation ───────────────────────────────────────────────
-
+  // ── Answer Selection ───────────────────────────────────────────────────────
   const handleSelect = useCallback(
     (value) => {
       if (!currentQuestion) return
+      setShowUnansweredWarning(false)
       setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }))
     },
     [currentQuestion],
   )
 
-  const handleNext = () => {
-    if (!canProceed || isLastInBatch) return
+  // ── Navigation ─────────────────────────────────────────────────────────────
+  const handleNext = useCallback(() => {
+    if (!canGoNext) return
     setCurrentIndex((prev) => prev + 1)
-  }
+  }, [canGoNext])
 
-  // ─── Batch submission & next delivery ─────────────────────────────────────
+  const handlePrev = useCallback(() => {
+    if (currentIndex === 0 || isSubmitting) return
+    setShowUnansweredWarning(false)
+    setCurrentIndex((prev) => Math.max(prev - 1, 0))
+  }, [currentIndex, isSubmitting])
 
-  /**
-   * Submits all answered questions in the current batch and loads the next one.
-   * For Section 2 the "batch" is a single question, so this fires after every answer.
-   * For Sections 1, 3, 4 it fires after the last question in the 4-question batch.
-   */
-  const handleSubmit = async () => {
-    if (!canProceed || !sessionId || !isLastInBatch) return
+  // ── Batch Submit ───────────────────────────────────────────────────────────
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitting || !sessionId || !isLastInBatch) return
 
+    // Guard: all batch questions must be answered before submitting
+    if (!allBatchAnswered) {
+      setShowUnansweredWarning(true)
+      // Navigate to the first unanswered question in the batch so the user can see it
+      const firstUnansweredIdx = questions.findIndex((q) => answers[q.id] == null)
+      if (firstUnansweredIdx >= 0) {
+        setCurrentIndex(firstUnansweredIdx)
+      }
+      return
+    }
+
+    setShowUnansweredWarning(false)
     setIsSubmitting(true)
     setError(null)
 
     try {
+      // Build payload: only include questions that have been answered (safety net)
       const payload = {
-        answers: questions.map((question) => ({
-          question_id: question.id,
-          likert_value: answers[question.id],
-        })),
+        answers: questions
+          .filter((q) => answers[q.id] != null)
+          .map((q) => ({
+            question_id: q.id,
+            likert_value: answers[q.id],
+          })),
       }
 
       const response = await submitAnswers(sessionId, payload)
 
-      // Update FSM state from response so SectionBanner reflects the transition
       if (response.fsm_state) {
         setFsmState(response.fsm_state)
       }
@@ -128,8 +149,11 @@ export default function AssessmentPage() {
         sessionStorage.setItem(RESULTS_KEY, JSON.stringify(results))
         navigate('/results', { state: { results } })
       } else if (response.questions && response.questions.length > 0) {
-        // Advance cumulative counter BEFORE resetting currentIndex
-        setTotalAnswered((prev) => prev + questions.length)
+        if (response.answers_count != null) {
+          setTotalAnswered(response.answers_count)
+        } else {
+          setTotalAnswered((prev) => prev + questions.length)
+        }
         setQuestions(response.questions)
         setAnswers({})
         setCurrentIndex(0)
@@ -139,84 +163,55 @@ export default function AssessmentPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }, [isSubmitting, sessionId, isLastInBatch, allBatchAnswered, questions, answers, navigate])
 
-  // ─── Phase: Idle ────────────────────────────────────────────────────────────
-
+  // ── Idle Screen ────────────────────────────────────────────────────────────
   if (phase === 'idle') {
     return (
       <Layout>
-        <div className="surface-card mx-auto max-w-xl p-10 text-center space-y-5">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-            <Sparkles className="h-7 w-7" />
+        <div className="surface-card mx-auto max-w-lg p-8 text-center space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
+            <Sparkles className="h-6 w-6" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Career Role Assessment
-            </h2>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              Answer a series of questions about your interests and thinking style. The engine
-              adapts in real time, skipping questions where your signal is already clear.
-            </p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+            RoleCompass Assessment
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Answer the following questions to discover your best-fit IT job role.
+          </p>
+          <div className="pt-2">
+            <button type="button" onClick={handleBegin} className="btn-primary px-6 py-2.5">
+              Start Assessment
+            </button>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-400 max-w-xs mx-auto">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
-              <div className="font-bold text-slate-800 dark:text-white">4 Sections</div>
-              <div>Personality → Technical → Role Fit → Specialist</div>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
-              <div className="font-bold text-slate-800 dark:text-white">Adaptive</div>
-              <div>44–84 questions based on your answers</div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleBegin}
-            className="btn-primary gap-2 text-sm mx-auto"
-          >
-            <Play className="h-4 w-4" />
-            Begin Assessment
-          </button>
         </div>
       </Layout>
     )
   }
-
-  // ─── Phase: Loading ──────────────────────────────────────────────────────────
 
   if (phase === 'loading') {
     return (
       <Layout>
-        <div className="surface-card mx-auto max-w-xl p-12 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600/10 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-            Preparing your career assessment
-          </h2>
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-            Loading tailored evaluation questions…
-          </p>
+        <div className="surface-card mx-auto max-w-sm p-8 text-center space-y-3">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400" />
+          <p className="text-sm text-slate-600 dark:text-slate-400">Loading questions...</p>
         </div>
       </Layout>
     )
   }
 
-  // ─── Phase: Error ────────────────────────────────────────────────────────────
-
   if (phase === 'error') {
     return (
       <Layout>
-        <div className="surface-card mx-auto max-w-xl border-rose-200 p-8 text-center dark:border-rose-900/50 space-y-3">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 font-bold text-lg">
-            !
-          </div>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Assessment Error</h2>
-          <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p>
+        <div className="surface-card mx-auto max-w-md border-rose-200 p-6 text-center dark:border-rose-900/50 space-y-3">
+          <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">{error}</p>
           <button
             type="button"
-            onClick={() => { setPhase('idle'); setError(null) }}
-            className="btn-primary mt-2 px-5 py-2 text-xs"
+            onClick={() => {
+              setPhase('idle')
+              setError(null)
+            }}
+            className="btn-primary px-4 py-2 text-xs"
           >
             Try Again
           </button>
@@ -225,111 +220,164 @@ export default function AssessmentPage() {
     )
   }
 
-  // ─── Phase: Active ───────────────────────────────────────────────────────────
+  // ── Active Assessment ──────────────────────────────────────────────────────
+  const isSection2 = fsmState === 'SECTION_2_TECH_CORE'
+
+  // For single-question batches (Section 2), the "submit" action advances to the next
+  // question rather than the final submission — label it "Continue" to avoid confusion.
+  const isSingleQuestionBatch = questions.length === 1
+  const submitLabel = isSingleQuestionBatch ? 'Continue' : 'Submit Answers'
 
   return (
     <Layout>
-      <div className="mx-auto w-full max-w-3xl">
-
+      <div className="mx-auto w-full max-w-2xl space-y-5">
         {/* Section Banner */}
-        <SectionBanner fsmState={fsmState} subsectionLabel={subsectionLabel} />
+        <SectionBanner fsmState={fsmState} subsectionLabel={currentQuestion?.subsection_label} />
 
-        {/* Progress bar and cumulative counter */}
-        <div className="mb-6">
-          <div className="mb-2 flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-1.5">
-              <span className="flex h-2 w-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />
-              Question {questionNumber} of ~{ASSESSMENT_BASELINE_TOTAL}
+        {/* Progress & Question Header */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                Question {questionNumber}
+              </span>
+              {currentQuestion?.subsection_label && (
+                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  {currentQuestion.subsection_label}
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {Math.round(progress)}% Completed
             </span>
-            <span>{Math.round(progress)}% Completed</span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800">
+
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
             <div
-              className="h-full rounded-full bg-indigo-600 transition-all duration-300 ease-out dark:bg-indigo-500"
+              className="h-full bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
+
+          {/* Adaptive Skip Explanatory Banner in Section 2 */}
+          {isSection2 && (
+            <div className="flex items-center justify-between rounded-lg border border-indigo-100 bg-indigo-50/70 px-3 py-1.5 text-[11px] text-indigo-800 dark:border-indigo-900/50 dark:bg-indigo-950/30 dark:text-indigo-300">
+              <span className="flex items-center gap-1.5">
+                <span className="text-amber-500 font-bold">⚡</span>
+                <span>Adaptive Skip Active: Extreme responses (1, 2, 4, 5) resolve the domain instantly &amp; skip follow-up questions.</span>
+              </span>
+            </div>
+          )}
+
+          {/* Batch progress indicator — only shown for multi-question batches */}
+          {questions.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              {questions.map((q, idx) => {
+                const isAnswered = answers[q.id] != null
+                const isCurrent = idx === currentIndex
+                return (
+                  <button
+                    key={q.id}
+                    type="button"
+                    onClick={() => setCurrentIndex(idx)}
+                    disabled={isSubmitting}
+                    aria-label={`Go to question ${idx + 1}`}
+                    className={`h-2 flex-1 rounded-full transition-all duration-200 ${
+                      isCurrent
+                        ? 'bg-indigo-600 scale-y-125'
+                        : isAnswered
+                          ? 'bg-emerald-500'
+                          : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
+                  />
+                )
+              })}
+              <span className="ml-2 text-[10px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                {questions.filter((q) => answers[q.id] != null).length}/{questions.length} answered
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Assessment Card */}
-        <div className="surface-card overflow-hidden">
-          {/* Card Header */}
-          <div className="border-b border-slate-200/80 px-6 py-6 sm:px-8 sm:py-7 dark:border-slate-800/80">
-            <div className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
-              <Sparkles className="h-3 w-3" />
-              Question {questionNumber}
-            </div>
-            <h1 className="mt-3 text-lg font-semibold leading-snug text-slate-900 sm:text-xl dark:text-white">
+        {/* Question Card */}
+        <div className="surface-card p-6 sm:p-7 space-y-6">
+          <div className="space-y-2">
+            {currentQuestion?.section_label && (
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                <span>{currentQuestion.section_label}</span>
+              </div>
+            )}
+            <h2 className="text-lg sm:text-xl font-semibold leading-relaxed text-slate-900 dark:text-white">
               {currentQuestion?.text}
-            </h1>
+            </h2>
           </div>
 
-          {/* Card Body */}
-          <div className="px-6 py-6 sm:px-8 sm:py-8">
-            <p className="mb-4 text-xs font-medium text-slate-500 dark:text-slate-400">
-              Rate how strongly you identify with the statement:
-            </p>
+          {currentQuestion && (
+            <LikertScale
+              options={currentQuestion.options}
+              selectedValue={selectedValue}
+              onSelect={handleSelect}
+              disabled={isSubmitting}
+            />
+          )}
 
-            {currentQuestion && (
-              <LikertScale
-                options={currentQuestion.options}
-                selectedValue={selectedValue}
-                onSelect={handleSelect}
-                disabled={isSubmitting}
-              />
-            )}
+          {/* Unanswered questions warning */}
+          {showUnansweredWarning && unansweredInBatch > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-300">
+              ⚠️ Please answer {unansweredInBatch === 1 ? 'the remaining question' : `all ${unansweredInBatch} remaining questions`} in this batch before continuing.
+            </div>
+          )}
 
-            {error && (
-              <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
-                {error}
-              </div>
-            )}
+          {error && (
+            <div className="rounded-lg bg-rose-50 p-3 text-xs text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
+              {error}
+            </div>
+          )}
 
-            {/* Navigation Footer */}
-            <div className="mt-8 flex items-center justify-between border-t border-slate-200/60 pt-6 dark:border-slate-800/60">
+          {/* Navigation Controls */}
+          <div className="flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-800">
+            <button
+              type="button"
+              disabled={currentIndex === 0 || isSubmitting}
+              onClick={handlePrev}
+              className="btn-secondary gap-1.5 text-xs"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Previous</span>
+            </button>
+
+            {!isLastInBatch ? (
               <button
                 type="button"
-                disabled={currentIndex === 0 || isSubmitting}
-                onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
-                className="btn-secondary gap-1.5 text-xs"
+                disabled={!canGoNext}
+                onClick={handleNext}
+                className="btn-primary gap-1.5 text-xs"
               >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Previous
+                <span>Next</span>
+                <ArrowRight className="h-4 w-4" />
               </button>
-
-              <div>
-                {!isLastInBatch ? (
-                  <button
-                    type="button"
-                    disabled={!canProceed}
-                    onClick={handleNext}
-                    className="btn-primary gap-1.5 text-xs"
-                  >
-                    Next Question
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isSubmitting || (!allBatchAnswered && !isSubmitting)}
+                onClick={handleSubmit}
+                className={`btn-primary gap-1.5 text-xs ${
+                  isSingleQuestionBatch ? '' : 'bg-emerald-600 hover:bg-emerald-500'
+                } ${!allBatchAnswered && !isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={!canProceed}
-                    onClick={handleSubmit}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-medium text-white shadow-sm transition hover:bg-emerald-500 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Processing…
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Submit &amp; Continue
-                      </>
-                    )}
-                  </button>
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>{submitLabel}</span>
+                  </>
                 )}
-              </div>
-            </div>
+              </button>
+            )}
           </div>
         </div>
       </div>

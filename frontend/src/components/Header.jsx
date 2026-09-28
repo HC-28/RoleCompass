@@ -1,4 +1,5 @@
-import { Compass, LogOut, Moon, Sun, User, Sparkles } from 'lucide-react'
+import { Compass, LogOut, Menu, Moon, Sparkles, Sun, User, X } from 'lucide-react'
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -8,36 +9,36 @@ export default function Header() {
   const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const handleLogout = () => {
+    setMenuOpen(false)
     logout()
     navigate('/login')
   }
 
+  const isRouteActive = (path) => location.pathname === path
+
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-[var(--nav-border)] bg-[var(--nav-bg)] backdrop-blur-md transition-colors duration-200">
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand Logo with Compass */}
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        {/* Brand */}
         <div className="flex items-center gap-6">
-          <Link
-            to="/"
-            className="group flex items-center gap-2.5 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm transition duration-200 group-hover:scale-105 dark:bg-indigo-500">
-              <Compass className="h-5 w-5" strokeWidth={2.2} />
+          <Link to="/" className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
+              <Compass className="h-5 w-5" />
             </div>
-            <span className="text-base font-semibold tracking-tight text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">
-              RoleCompass
-            </span>
+            <span>RoleCompass</span>
           </Link>
 
+          {/* Desktop Nav */}
           {isAuthenticated && (
-            <nav className="hidden sm:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-1">
               <Link
                 to="/assessment"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                  location.pathname === '/assessment'
-                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  isRouteActive('/assessment')
+                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
@@ -46,9 +47,9 @@ export default function Header() {
               </Link>
               <Link
                 to="/profile"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                  location.pathname === '/profile'
-                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  isRouteActive('/profile')
+                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
@@ -59,43 +60,73 @@ export default function Header() {
           )}
         </div>
 
-        {/* Right Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        {/* Actions */}
+        <div className="flex items-center gap-2">
           {isAuthenticated && (
-            <div className="flex items-center gap-2">
-              <Link
-                to="/profile"
-                className="hidden max-w-[180px] truncate rounded-lg border border-slate-200 bg-slate-100/80 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-200/80 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:inline-block"
-              >
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="max-w-[160px] truncate text-xs text-slate-600 dark:text-slate-400">
                 {email}
-              </Link>
+              </span>
               <button
                 type="button"
                 onClick={handleLogout}
-                title="Sign out"
-                className="btn-secondary flex h-9 items-center gap-1.5 px-3 py-1.5 text-xs"
+                className="btn-secondary h-8 px-2.5 text-xs"
               >
                 <LogOut className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Sign out</span>
+                <span>Sign out</span>
               </button>
             </div>
           )}
 
-          {/* Theme Switcher Toggle */}
+          {/* Theme Toggle */}
           <button
             type="button"
             onClick={toggleTheme}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition duration-150 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-offset-slate-950"
+            aria-label="Toggle theme"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
           >
-            {isDark ? (
-              <Sun className="h-4 w-4 text-amber-400 transition-transform duration-200 hover:rotate-45" />
-            ) : (
-              <Moon className="h-4 w-4 text-slate-700 transition-transform duration-200 hover:-rotate-12" />
-            )}
+            {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
           </button>
+
+          {/* Mobile Menu Toggle */}
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex md:hidden h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-300"
+            >
+              {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Mobile Nav */}
+      {isAuthenticated && menuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950 space-y-1">
+          <Link
+            to="/assessment"
+            onClick={() => setMenuOpen(false)}
+            className="block rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900"
+          >
+            Assessment
+          </Link>
+          <Link
+            to="/profile"
+            onClick={() => setMenuOpen(false)}
+            className="block rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900"
+          >
+            Profile
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full text-left rounded-lg px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+          >
+            Sign Out
+          </button>
+        </div>
+      )}
     </header>
   )
 }

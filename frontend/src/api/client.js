@@ -13,7 +13,10 @@ export const clearStoredToken = () => {
 }
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
+  // In Docker: Nginx proxies /api/* → backend container. Use relative URL.
+  // In local dev: set VITE_API_BASE_URL=http://localhost:8080 in .env.local,
+  //   or configure Vite's server.proxy in vite.config.js.
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
   headers: {
     'Content-Type': 'application/json',
   },

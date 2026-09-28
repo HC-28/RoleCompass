@@ -26,3 +26,19 @@ export const FSM_SECTION_LABELS = {
 
 /** Total number of sections in the assessment pipeline. */
 export const TOTAL_SECTIONS = 4
+
+export const LIKERT_LABELS = {
+  1: 'Strongly Disagree',
+  2: 'Disagree',
+  3: 'Neutral',
+  4: 'Agree',
+  5: 'Strongly Agree',
+}
+
+export const LIKERT_SHORT_LABELS = {
+  1: 'Str. Disagree',
+  2: 'Disagree',
+  3: 'Neutral',
+  4: 'Agree',
+  5: 'Str. Agree',
+}

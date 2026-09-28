@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { login } from '../api/auth'
 import AuthCard from '../components/auth/AuthCard'
 import Layout from '../components/Layout'

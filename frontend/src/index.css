@@ -6,54 +6,53 @@
 }
 
 :root {
-  --bg-image: url('/background.png');
-
   /* Light Theme Surface Variables */
-  --card-bg: rgba(255, 255, 255, 0.94);
+  --card-bg: rgba(255, 255, 255, 0.88);
   --card-border: #e2e8f0;
-  --card-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 0 1px rgba(15, 23, 42, 0.1);
-  --nav-bg: rgba(255, 255, 255, 0.92);
+  --card-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08), 0 0 1px rgba(15, 23, 42, 0.08);
+  --nav-bg: rgba(255, 255, 255, 0.85);
   --nav-border: #e2e8f0;
   --input-bg: #ffffff;
   --input-border: #cbd5e1;
 }
 
 .dark {
-  /* Dark Theme Surface Variables */
-  --card-bg: rgba(17, 24, 39, 0.90);
-  --card-border: #1f2937;
-  --card-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
-  --nav-bg: rgba(17, 24, 39, 0.92);
-  --nav-border: #1f2937;
-  --input-bg: #111827;
-  --input-border: #374151;
+  /* Dark Theme Surface Variables - Premium Obsidian Tech Aesthetics */
+  --card-bg: rgba(15, 23, 42, 0.75);
+  --card-border: rgba(51, 65, 85, 0.6);
+  --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.1);
+  --nav-bg: rgba(11, 17, 33, 0.85);
+  --nav-border: rgba(51, 65, 85, 0.5);
+  --input-bg: rgba(15, 23, 42, 0.8);
+  --input-border: #334155;
 }
 
 @layer base {
   html {
     @apply antialiased scroll-smooth;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply m-0 min-h-screen font-sans text-slate-900 selection:bg-indigo-500/20 selection:text-indigo-600 dark:text-slate-100 dark:selection:bg-indigo-500/30 dark:selection:text-indigo-400;
+    @apply m-0 min-h-screen font-sans text-slate-900 selection:bg-indigo-500/20 selection:text-indigo-600 dark:text-slate-100 dark:selection:bg-indigo-500/30 dark:selection:text-indigo-400 bg-slate-50 dark:bg-[#0b101e];
+  }
+
+  button, a {
+    touch-action: manipulation;
   }
 }
 
 @layer components {
   /* Page Container */
   .app-background {
-    @apply relative min-h-screen w-full text-slate-900 transition-colors duration-300 dark:text-slate-100;
+    @apply relative min-h-screen w-full text-slate-900 transition-colors duration-300 dark:text-slate-100 overflow-x-hidden;
   }
 
-  /* Direct, clearly visible background image without dark muting/gradients */
-  .bg-layer-artwork {
-    @apply pointer-events-none fixed inset-0 z-0 bg-cover bg-center bg-no-repeat transition-opacity duration-300;
-    background-image: var(--bg-image);
-  }
-
-  /* Clean SaaS Surface Card with light backdrop blur for text contrast */
+  /* Surface Card with Glassmorphism */
   .surface-card {
-    @apply rounded-2xl backdrop-blur-md transition-all duration-200;
+    @apply rounded-2xl transition duration-200 backdrop-blur-xl;
     background-color: var(--card-bg);
     border: 1px solid var(--card-border);
     box-shadow: var(--card-shadow);
@@ -61,18 +60,19 @@
 
   /* Form Input Field */
   .input-field {
-    @apply w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition duration-150 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-500 dark:focus:ring-indigo-500/30;
+    @apply w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:text-slate-100 dark:placeholder:text-slate-500;
     background-color: var(--input-bg);
     border: 1px solid var(--input-border);
   }
 
   /* Primary Action Button */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-150 hover:bg-indigo-500 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:focus-visible:ring-offset-slate-950;
+    @apply inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   /* Secondary Action Button */
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white/90 px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition duration-150 hover:border-slate-400 hover:bg-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-offset-slate-950;
+    @apply inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700;
   }
 }
+
