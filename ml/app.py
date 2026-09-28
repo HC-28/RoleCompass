@@ -15,6 +15,8 @@ Feature input order (frozen — must match train_model.py and FeatureIndex.java 
   TESTDES, TESTAUTO, OBSERV, PERF, FULLSPEC
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 import joblib
 import numpy as np
@@ -22,26 +24,33 @@ import os
 from pydantic import BaseModel, field_validator
 from typing import List, Optional
 
-app = FastAPI(title='RoleCompass ML Service', version='2.0.0')
-
 # ── Model loading ─────────────────────────────────────────────────────────────
 model = None
 le = None
 
-if os.path.exists('role_predictor.pkl') and os.path.exists('label_encoder.pkl'):
-    model = joblib.load('role_predictor.pkl')
-    le = joblib.load('label_encoder.pkl')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(BASE_DIR, 'role_predictor.pkl')
+le_path = os.path.join(BASE_DIR, 'label_encoder.pkl')
+
+if os.path.exists(model_path) and os.path.exists(le_path):
+    model = joblib.load(model_path)
+    le = joblib.load(le_path)
     print(f"[OK] Model loaded. Classes: {list(le.classes_)}")
     print(f"[OK] Expected input features: {model.n_features_in_}")
 else:
-    print("[WARN] Models not found. Train first with train_model.py")
+    print("[WARN] Models not found at", model_path, le_path)
 
-@app.on_event("startup")
-async def startup_banner():
+# ── Lifespan (replaces deprecated @app.on_event) ─────────────────────────────
+@asynccontextmanager
+async def lifespan(application: FastAPI):
     print("---------------------------------------------------------")
     print("  RoleCompass ML Service running at: http://localhost:8000")
     print("  API Docs:                          http://localhost:8000/docs")
     print("---------------------------------------------------------")
+    yield
+    # Nothing to clean up on shutdown
+
+app = FastAPI(title='RoleCompass ML Service', version='2.0.0', lifespan=lifespan)
 
 EXPECTED_FEATURES = 20
 
@@ -118,24 +127,32 @@ def score(req: ScoreRequest) -> ScoreResponse:
                        f"Valid roles: {sorted(class_names)}"
             )
 
-    # Determine predicted role
+    # Determine predicted role and alternates
     if candidate_set:
         # Must pick from candidate set — find highest-confidence role in it
         filtered = [(role, conf) for role, conf in ranked if role in candidate_set]
         if not filtered:
             # Fallback: return the overall top prediction (shouldn't happen in normal flow)
             predicted_role, predicted_conf = ranked[0]
+            candidate_alternates = [r for r in ranked if r[0] != predicted_role]
         else:
             predicted_role, predicted_conf = filtered[0]
+            candidate_alternates = filtered[1:]
+            # If candidate_set had only 1 role, pad with global non-predicted roles
+            if not candidate_alternates:
+                candidate_alternates = [r for r in ranked if r[0] != predicted_role]
+
+        alternates = [
+            AlternateRole(role=role, confidence=float(conf))
+            for role, conf in candidate_alternates
+        ][:2]
     else:
         predicted_role, predicted_conf = ranked[0]
-
-    # Build alternates: top 2 from ranked that are NOT the predicted role
-    alternates = [
-        AlternateRole(role=role, confidence=float(conf))
-        for role, conf in ranked
-        if role != predicted_role
-    ][:2]
+        alternates = [
+            AlternateRole(role=role, confidence=float(conf))
+            for role, conf in ranked
+            if role != predicted_role
+        ][:2]
 
     return ScoreResponse(
         predicted_role=predicted_role,

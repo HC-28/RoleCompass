@@ -1,4 +1,28 @@
+# ML service build context exclusions
+# Keeps the Docker build context small — only app.py + *.pkl are COPYed into the image
+
+# Python virtual environment (thousands of files, never needed in container)
 .venv/
+
+# Compiled Python cache files
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Training / data pipeline scripts (not needed at runtime)
+dataset/
+build_*.py
+generate_dataset.py
+train_model.py
+build_log.txt
+professor_demo.py
+test_api.py
+
+# Git and IDE files
 .git/
+.gitignore
+*.md
+
+# Test files
+test_*.py

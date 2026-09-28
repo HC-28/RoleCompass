@@ -1,8 +1,18 @@
-fastapi>=0.111.0
-uvicorn[standard]>=0.29.0
-scikit-learn>=1.4.2
-numpy>=1.26.4
-pandas>=2.2.2
-joblib>=1.4.2
-pydantic>=2.7.1
-httpx>=0.28.0
+# Pinned exact versions — matches the local .venv (pip freeze output).
+#
+# WHY PINNED: pip was crashing with JSONDecodeError while downloading large
+# PyPI Simple API JSON index files (numpy, scipy, scikit-learn indexes are 5-10 MB).
+# Exact pinning means pip fetches only the specific wheel files, skipping
+# full index resolution and eliminating the truncation error.
+#
+# To update: run `pip freeze` in the local .venv and copy the relevant lines here.
+
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+scikit-learn==1.9.1
+numpy==2.5.3
+pandas==3.0.5
+joblib==1.6.0
+pydantic==2.13.5
+scipy==1.18.1
+httpx==0.28.1
