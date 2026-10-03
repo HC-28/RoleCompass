@@ -32,7 +32,7 @@ public class Session {
      * Current FSM state. Persisted so every answer submission can resume correctly.
      * Maps to {@link com.rolecompass.routing.FsmState} enum name.
      */
-    @Column(name = "fsm_state", nullable = false, columnDefinition = "varchar(50) default 'SECTION_1_RIASEC'")
+    @Column(name = "fsm_state", nullable = false, length = 50)
     @Builder.Default
     private String fsmState = "SECTION_1_RIASEC";
 

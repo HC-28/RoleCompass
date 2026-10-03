@@ -1,19 +1,45 @@
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronUp, Loader2, Sparkles } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { predict, startSession, submitAnswers } from '../api/session'
 import Layout from '../components/Layout'
+import InterestScale from '../components/assessment/InterestScale'
 import LikertScale from '../components/assessment/LikertScale'
+import PreferenceScale from '../components/assessment/PreferenceScale'
 import SectionBanner from '../components/assessment/SectionBanner'
-import { ASSESSMENT_BASELINE_TOTAL } from '../constants/assessment.constants'
+import { ASSESSMENT_BASELINE_TOTAL, RESPONSE_TYPES } from '../constants/assessment.constants'
 import { extractErrorMessage } from '../utils/validation'
 
 const RESULTS_KEY = 'rolecompass_results'
 
+// All 10 roles in canonical order — shown as the "initial" pool
+const ALL_ROLES = [
+  'Backend Developer',
+  'Frontend Developer',
+  'Full Stack Developer',
+  'Data Scientist',
+  'Data Engineer',
+  'Cybersecurity Engineer',
+  'DevOps Engineer',
+  'Cloud Engineer',
+  'Android Developer',
+  'QA / Test Automation Engineer',
+]
+
+// Section label map for the progress panel
+const SECTION_LABELS = {
+  SECTION_1_RIASEC:     'Section 1 — Psychometric (RIASEC)',
+  SECTION_2_TECH_CORE:  'Section 2 — Technical Core',
+  SECTION_3_RESOLVER:   'Section 3 — Resolver',
+  SECTION_4_SPECIALIST: 'Section 4 — Specialist',
+  TERMINAL_SCORING:     'Section 4 — Specialist',
+  COMPLETED:            'Completed',
+}
+
 export default function AssessmentPage() {
   const navigate = useNavigate()
 
-  const [phase, setPhase] = useState('idle') // 'idle' | 'loading' | 'active' | 'error'
+  const [phase, setPhase] = useState('idle')
   const [sessionId, setSessionId] = useState(null)
   const [questions, setQuestions] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -24,53 +50,43 @@ export default function AssessmentPage() {
   const [error, setError] = useState(null)
   const [showUnansweredWarning, setShowUnansweredWarning] = useState(false)
 
+  // Progress panel state
+  const [progressSnapshots, setProgressSnapshots] = useState([
+    { sectionLabel: 'Initial Pool', roles: ALL_ROLES },
+  ])
+  const [showProgress, setShowProgress] = useState(false)
+
   const currentQuestion = questions[currentIndex]
   const selectedValue = currentQuestion ? (answers[currentQuestion.id] ?? null) : null
   const isLastInBatch = currentIndex === questions.length - 1
 
-  // ── Batch completion checks ────────────────────────────────────────────────
-  /** True only when every question in the current batch has been answered. */
   const allBatchAnswered = useMemo(
     () => questions.length > 0 && questions.every((q) => answers[q.id] != null),
     [questions, answers],
   )
 
-  /**
-   * Can navigate to the next question in the batch:
-   * - Current question must be answered.
-   * - Not already on the last question.
-   * - Not submitting.
-   */
   const canGoNext = useMemo(
     () => selectedValue !== null && !isLastInBatch && !isSubmitting,
     [selectedValue, isLastInBatch, isSubmitting],
   )
 
-  /**
-   * Can submit the batch:
-   * - ALL batch questions must be answered.
-   * - Must be on the last question (otherwise use Next).
-   * - Not already submitting.
-   */
   const canSubmit = useMemo(
     () => allBatchAnswered && isLastInBatch && !isSubmitting,
     [allBatchAnswered, isLastInBatch, isSubmitting],
   )
 
-  // Progress bar — based on total answered + current position within batch
   const questionNumber = totalAnswered + currentIndex + 1
   const progress = Math.min((questionNumber / ASSESSMENT_BASELINE_TOTAL) * 100, 100)
 
-  // How many batch questions still need an answer (for warning display)
   const unansweredInBatch = useMemo(
     () => questions.filter((q) => answers[q.id] == null).length,
     [questions, answers],
   )
 
-  // ── Session Start ──────────────────────────────────────────────────────────
   const handleBegin = async () => {
     setPhase('loading')
     setError(null)
+    setProgressSnapshots([{ sectionLabel: 'Initial Pool', roles: ALL_ROLES }])
     try {
       const response = await startSession()
       setSessionId(response.session_id)
@@ -86,7 +102,19 @@ export default function AssessmentPage() {
     }
   }
 
-  // ── Answer Selection ───────────────────────────────────────────────────────
+  // Called by Layout -> Header when user confirms exit
+  const handleExitConfirm = () => {
+    setPhase('idle')
+    setSessionId(null)
+    setQuestions([])
+    setAnswers({})
+    setTotalAnswered(0)
+    setCurrentIndex(0)
+    setFsmState('SECTION_1_RIASEC')
+    setProgressSnapshots([{ sectionLabel: 'Initial Pool', roles: ALL_ROLES }])
+    setError(null)
+  }
+
   const handleSelect = useCallback(
     (value) => {
       if (!currentQuestion) return
@@ -96,7 +124,6 @@ export default function AssessmentPage() {
     [currentQuestion],
   )
 
-  // ── Navigation ─────────────────────────────────────────────────────────────
   const handleNext = useCallback(() => {
     if (!canGoNext) return
     setCurrentIndex((prev) => prev + 1)
@@ -108,18 +135,13 @@ export default function AssessmentPage() {
     setCurrentIndex((prev) => Math.max(prev - 1, 0))
   }, [currentIndex, isSubmitting])
 
-  // ── Batch Submit ───────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
     if (isSubmitting || !sessionId || !isLastInBatch) return
 
-    // Guard: all batch questions must be answered before submitting
     if (!allBatchAnswered) {
       setShowUnansweredWarning(true)
-      // Navigate to the first unanswered question in the batch so the user can see it
       const firstUnansweredIdx = questions.findIndex((q) => answers[q.id] == null)
-      if (firstUnansweredIdx >= 0) {
-        setCurrentIndex(firstUnansweredIdx)
-      }
+      if (firstUnansweredIdx >= 0) setCurrentIndex(firstUnansweredIdx)
       return
     }
 
@@ -128,7 +150,6 @@ export default function AssessmentPage() {
     setError(null)
 
     try {
-      // Build payload: only include questions that have been answered (safety net)
       const payload = {
         answers: questions
           .filter((q) => answers[q.id] != null)
@@ -142,6 +163,22 @@ export default function AssessmentPage() {
 
       if (response.fsm_state) {
         setFsmState(response.fsm_state)
+      }
+
+      // Capture progress snapshot from candidate_roles sent by backend
+      if (Array.isArray(response.candidate_roles) && response.candidate_roles.length > 0) {
+        const sectionLabel = SECTION_LABELS[fsmState] ?? `Section (${fsmState})`
+        setProgressSnapshots((prev) => {
+          const already = prev.some((s) => s.sectionLabel === sectionLabel)
+          if (already) {
+            return prev.map((s) =>
+              s.sectionLabel === sectionLabel
+                ? { ...s, roles: response.candidate_roles }
+                : s,
+            )
+          }
+          return [...prev, { sectionLabel, roles: response.candidate_roles }]
+        })
       }
 
       if (response.status === 'ready_to_predict') {
@@ -163,9 +200,8 @@ export default function AssessmentPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, sessionId, isLastInBatch, allBatchAnswered, questions, answers, navigate])
+  }, [isSubmitting, sessionId, isLastInBatch, allBatchAnswered, questions, answers, navigate, fsmState])
 
-  // ── Idle Screen ────────────────────────────────────────────────────────────
   if (phase === 'idle') {
     return (
       <Layout>
@@ -207,10 +243,7 @@ export default function AssessmentPage() {
           <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">{error}</p>
           <button
             type="button"
-            onClick={() => {
-              setPhase('idle')
-              setError(null)
-            }}
+            onClick={() => { setPhase('idle'); setError(null) }}
             className="btn-primary px-4 py-2 text-xs"
           >
             Try Again
@@ -220,21 +253,18 @@ export default function AssessmentPage() {
     )
   }
 
-  // ── Active Assessment ──────────────────────────────────────────────────────
   const isSection2 = fsmState === 'SECTION_2_TECH_CORE'
-
-  // For single-question batches (Section 2), the "submit" action advances to the next
-  // question rather than the final submission — label it "Continue" to avoid confusion.
   const isSingleQuestionBatch = questions.length === 1
   const submitLabel = isSingleQuestionBatch ? 'Continue' : 'Submit Answers'
 
   return (
-    <Layout>
+    <Layout
+      isAssessmentActive={phase === 'active'}
+      onExitConfirm={handleExitConfirm}
+    >
       <div className="mx-auto w-full max-w-2xl space-y-5">
-        {/* Section Banner */}
         <SectionBanner fsmState={fsmState} subsectionLabel={currentQuestion?.subsection_label} />
 
-        {/* Progress & Question Header */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -259,17 +289,15 @@ export default function AssessmentPage() {
             />
           </div>
 
-          {/* Adaptive Skip Explanatory Banner in Section 2 */}
           {isSection2 && (
             <div className="flex items-center justify-between rounded-lg border border-indigo-100 bg-indigo-50/70 px-3 py-1.5 text-[11px] text-indigo-800 dark:border-indigo-900/50 dark:bg-indigo-950/30 dark:text-indigo-300">
               <span className="flex items-center gap-1.5">
-                <span className="text-amber-500 font-bold">⚡</span>
+                <span className="text-amber-500 font-bold">&#x26A1;</span>
                 <span>Adaptive Skip Active: Extreme responses (1, 2, 4, 5) resolve the domain instantly &amp; skip follow-up questions.</span>
               </span>
             </div>
           )}
 
-          {/* Batch progress indicator — only shown for multi-question batches */}
           {questions.length > 1 && (
             <div className="flex items-center gap-1.5">
               {questions.map((q, idx) => {
@@ -299,7 +327,6 @@ export default function AssessmentPage() {
           )}
         </div>
 
-        {/* Question Card */}
         <div className="surface-card p-6 sm:p-7 space-y-6">
           <div className="space-y-2">
             {currentQuestion?.section_label && (
@@ -308,23 +335,59 @@ export default function AssessmentPage() {
               </div>
             )}
             <h2 className="text-lg sm:text-xl font-semibold leading-relaxed text-slate-900 dark:text-white">
-              {currentQuestion?.text}
+              {currentQuestion?.text?.includes('| Option A:')
+                ? currentQuestion.text.split('|')[0].trim()
+                : currentQuestion?.text}
             </h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {(() => {
+                const responseType = currentQuestion?.response_type || RESPONSE_TYPES.LIKERT_5
+                if (responseType === RESPONSE_TYPES.INTEREST_4) {
+                  return 'Select how interested you would be in doing this task:'
+                }
+                if (responseType === RESPONSE_TYPES.PREFERENCE_4) {
+                  return 'Compare the two options below and pick the direction that resonates more:'
+                }
+                return 'Select how accurately this statement describes you:'
+              })()}
+            </p>
           </div>
 
-          {currentQuestion && (
-            <LikertScale
-              options={currentQuestion.options}
-              selectedValue={selectedValue}
-              onSelect={handleSelect}
-              disabled={isSubmitting}
-            />
-          )}
+          {currentQuestion && (() => {
+            const responseType = currentQuestion.response_type || RESPONSE_TYPES.LIKERT_5
+            if (responseType === RESPONSE_TYPES.INTEREST_4) {
+              return (
+                <InterestScale
+                  selectedValue={selectedValue}
+                  onSelect={handleSelect}
+                  disabled={isSubmitting}
+                />
+              )
+            }
+            if (responseType === RESPONSE_TYPES.PREFERENCE_4) {
+              return (
+                <PreferenceScale
+                  questionText={currentQuestion.text}
+                  selectedValue={selectedValue}
+                  onSelect={handleSelect}
+                  disabled={isSubmitting}
+                />
+              )
+            }
+            // Default: Section 1 descriptive fit Likert
+            return (
+              <LikertScale
+                options={currentQuestion.options}
+                selectedValue={selectedValue}
+                onSelect={handleSelect}
+                disabled={isSubmitting}
+              />
+            )
+          })()}
 
-          {/* Unanswered questions warning */}
           {showUnansweredWarning && unansweredInBatch > 0 && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-300">
-              ⚠️ Please answer {unansweredInBatch === 1 ? 'the remaining question' : `all ${unansweredInBatch} remaining questions`} in this batch before continuing.
+              Warning: Please answer {unansweredInBatch === 1 ? 'the remaining question' : `all ${unansweredInBatch} remaining questions`} in this batch before continuing.
             </div>
           )}
 
@@ -334,7 +397,6 @@ export default function AssessmentPage() {
             </div>
           )}
 
-          {/* Navigation Controls */}
           <div className="flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-800">
             <button
               type="button"
@@ -380,6 +442,100 @@ export default function AssessmentPage() {
             )}
           </div>
         </div>
+
+        {/* Show Progress Panel */}
+        {progressSnapshots.length > 0 && (
+          <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-900/50">
+            <button
+              id="toggle-progress-panel"
+              type="button"
+              onClick={() => setShowProgress((prev) => !prev)}
+              className="flex w-full items-center justify-between px-5 py-3.5 text-left"
+              aria-expanded={showProgress}
+              aria-controls="progress-panel-content"
+            >
+              <span className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+                  {progressSnapshots.length}
+                </span>
+                Show Progress
+              </span>
+              {showProgress ? (
+                <ChevronUp className="h-4 w-4 text-slate-500" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-slate-500" />
+              )}
+            </button>
+
+            {showProgress && (
+              <div
+                id="progress-panel-content"
+                className="border-t border-slate-200 dark:border-slate-700/50 px-5 py-4 space-y-5"
+              >
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  The <span className="font-semibold text-indigo-600 dark:text-indigo-400">Adaptive Routing Engine</span> (server-side) eliminates roles that do not match your psychometric and technical profile. The list below shows which roles survived after each section.
+                </p>
+
+                <div className="space-y-4">
+                  {progressSnapshots.map((snapshot, snapshotIdx) => {
+                    const isInitial = snapshotIdx === 0
+                    const prevRoles = snapshotIdx > 0 ? progressSnapshots[snapshotIdx - 1].roles : ALL_ROLES
+                    const eliminated = prevRoles.filter((r) => !snapshot.roles.includes(r))
+
+                    return (
+                      <div key={snapshot.sectionLabel} className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div
+                            className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                              isInitial
+                                ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                                : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300'
+                            }`}
+                          >
+                            {isInitial ? '*' : snapshotIdx}
+                          </div>
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            {snapshot.sectionLabel}
+                          </span>
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                            {snapshot.roles.length} remaining
+                          </span>
+                          {!isInitial && eliminated.length > 0 && (
+                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                              -{eliminated.length} eliminated
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5 pl-8">
+                          {ALL_ROLES.map((role) => {
+                            const isRemaining = snapshot.roles.includes(role)
+                            const wasJustEliminated = !isInitial && eliminated.includes(role)
+                            if (!isInitial && !isRemaining && !wasJustEliminated) return null
+                            return (
+                              <span
+                                key={role}
+                                className={`rounded-lg px-2.5 py-1 text-[11px] font-medium ${
+                                  wasJustEliminated
+                                    ? 'bg-rose-100 text-rose-600 line-through dark:bg-rose-900/30 dark:text-rose-400'
+                                    : isRemaining
+                                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                      : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                                }`}
+                              >
+                                {role}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   )

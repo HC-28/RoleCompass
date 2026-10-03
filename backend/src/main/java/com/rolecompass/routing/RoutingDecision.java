@@ -1,5 +1,6 @@
 package com.rolecompass.routing;
 
+import com.rolecompass.dto.response.PredictionResponse.EliminatedRole;
 import java.util.List;
 
 /**
@@ -32,11 +33,20 @@ public record RoutingDecision(
          * Human-readable explanation of the decision — used for logging/debugging only.
          * Never sent to React.
          */
-        String reason
+        String reason,
+
+        /**
+         * Accumulated eliminated roles with student-facing reasons.
+         */
+        List<EliminatedRole> eliminationLog
 ) {
     /** Factory for a predict-ready decision. */
     public static RoutingDecision readyToPredict(List<String> survivors, FsmState nextState) {
-        return new RoutingDecision(true, survivors, List.of(), nextState, "Sufficient answers collected");
+        return readyToPredict(survivors, nextState, List.of());
+    }
+
+    public static RoutingDecision readyToPredict(List<String> survivors, FsmState nextState, List<EliminatedRole> eliminationLog) {
+        return new RoutingDecision(true, survivors, List.of(), nextState, "Sufficient answers collected", eliminationLog != null ? eliminationLog : List.of());
     }
 
     /** Factory for a decision that continues assessment with more questions. */
@@ -46,6 +56,17 @@ public record RoutingDecision(
             FsmState nextState,
             String reason
     ) {
-        return new RoutingDecision(false, survivors, nextQuestions, nextState, reason);
+        return continueWith(survivors, nextQuestions, nextState, reason, List.of());
+    }
+
+    public static RoutingDecision continueWith(
+            List<String> survivors,
+            List<Long> nextQuestions,
+            FsmState nextState,
+            String reason,
+            List<EliminatedRole> eliminationLog
+    ) {
+        return new RoutingDecision(false, survivors, nextQuestions, nextState, reason, eliminationLog != null ? eliminationLog : List.of());
     }
 }
+

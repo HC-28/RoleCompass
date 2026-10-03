@@ -203,11 +203,11 @@ public class AdaptiveRoutingEngine {
             case SECTION_4_SPECIALIST -> handleSection4(state);
 
             case TERMINAL_SCORING -> RoutingDecision.readyToPredict(
-                    state.candidateRoles(), FsmState.COMPLETED);
+                    state.candidateRoles(), FsmState.COMPLETED, state.eliminationLog());
 
             case COMPLETED -> {
                 log.warn("evaluate() called on COMPLETED session {}", state.sessionId());
-                yield RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.COMPLETED);
+                yield RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.COMPLETED, state.eliminationLog());
             }
         };
     }
@@ -223,7 +223,8 @@ public class AdaptiveRoutingEngine {
         List<Long> batch = unanswered.stream().limit(BATCH_SIZE).collect(Collectors.toList());
         return RoutingDecision.continueWith(
                 state.candidateRoles(), batch, FsmState.SECTION_1_RIASEC,
-                String.format("Section 1 in progress: %d/%d answered", state.section1AnsweredCount(), SECTION_1_QUESTION_COUNT));
+                String.format("Section 1 in progress: %d/%d answered", state.section1AnsweredCount(), SECTION_1_QUESTION_COUNT),
+                state.eliminationLog());
     }
 
     /**
@@ -282,7 +283,8 @@ public class AdaptiveRoutingEngine {
         return RoutingDecision.continueWith(
                 state.candidateRoles(), batch, FsmState.SECTION_2_TECH_CORE,
                 String.format("Section 2 in progress: %d answered, %d remaining",
-                        state.section2AnsweredCount(), toServe.size()));
+                        state.section2AnsweredCount(), toServe.size()),
+                state.eliminationLog());
     }
 
     private RoutingDecision handleResolverEvaluation(RoutingState state) {
@@ -319,7 +321,7 @@ public class AdaptiveRoutingEngine {
         if (state.mlConfidenceMargin() != null && state.mlConfidenceMargin() >= ML_DECISIVE_MARGIN_THRESHOLD) {
             log.info("Decisive ML confidence margin ({}) detected for session {}. Bypassing Section 3 & 4 resolvers.",
                     String.format("%.3f", state.mlConfidenceMargin()), state.sessionId());
-            return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING);
+            return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING, state.eliminationLog());
         }
 
         // Multiple roles have similar and high confidence (margin < 0.18) or ML offline:
@@ -333,7 +335,8 @@ public class AdaptiveRoutingEngine {
             List<Long> batch = applicableResolvers.stream().limit(BATCH_SIZE).collect(Collectors.toList());
             return RoutingDecision.continueWith(
                     state.candidateRoles(), batch, FsmState.SECTION_3_RESOLVER,
-                    "High ambiguity between top candidates. Serving resolver questions to break tie.");
+                    "High ambiguity between top candidates. Serving resolver questions to break tie.",
+                    state.eliminationLog());
         }
 
         // No pairwise resolver questions applicable — advance to Section 4 specialist probes
@@ -349,7 +352,8 @@ public class AdaptiveRoutingEngine {
         List<Long> batch = unanswered.stream().limit(BATCH_SIZE).collect(Collectors.toList());
         return RoutingDecision.continueWith(
                 state.candidateRoles(), batch, FsmState.SECTION_3_RESOLVER,
-                "Section 3 resolver in progress");
+                "Section 3 resolver in progress",
+                state.eliminationLog());
     }
 
     private RoutingDecision handleSection4(RoutingState state) {
@@ -362,7 +366,7 @@ public class AdaptiveRoutingEngine {
 
         if (candidateQuestions.isEmpty()) {
             log.info("Section 4 specialist probes complete for session {}. Advancing to TERMINAL_SCORING.", state.sessionId());
-            return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING);
+            return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING, state.eliminationLog());
         }
 
         // Option 3: If top tied roles are available from ML, prioritize probes for those specific roles
@@ -384,11 +388,21 @@ public class AdaptiveRoutingEngine {
 
         return RoutingDecision.continueWith(
                 state.candidateRoles(), batch, FsmState.SECTION_4_SPECIALIST,
-                "Section 4 specialist probes in progress");
+                "Section 4 specialist probes in progress",
+                state.eliminationLog());
     }
 
     private RoutingDecision advanceFromResolver(RoutingState state) {
-        // Re-evaluate ML score after resolver questions to check if the tie is broken
+        // Step 1: Decisive pairwise elimination from Section 3 answers
+        GateResult resolverResult = applyResolverGates(state);
+        if (!resolverResult.log().isEmpty()) {
+            log.info("Section 3 pairwise gates eliminated {} roles: {}",
+                    state.candidateRoles().size() - resolverResult.survivors().size(),
+                    resolverResult.log().stream().map(EliminatedRole::getRole).collect(Collectors.toList()));
+            state = state.withCandidatesAndEliminationLog(resolverResult.survivors(), resolverResult.log());
+        }
+
+        // Step 2: Re-evaluate ML score after resolver questions to check if the tie is broken
         if (mlClientService != null) {
             try {
                 var preview = mlClientService.score(state.techVector(), state.candidateRoles());
@@ -415,11 +429,11 @@ public class AdaptiveRoutingEngine {
             }
         }
 
-        // OPTION 3: If ML confidence is now decisive (margin >= 0.18), skip Section 4 probes
+        // Step 3: If ML confidence is now decisive (margin >= 0.18), skip Section 4 probes
         if (state.mlConfidenceMargin() != null && state.mlConfidenceMargin() >= ML_DECISIVE_MARGIN_THRESHOLD) {
             log.info("Decisive ML confidence margin ({}) after Section 3 for session {}. Skipping Section 4 specialist probes.",
                     String.format("%.3f", state.mlConfidenceMargin()), state.sessionId());
-            return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING);
+            return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING, state.eliminationLog());
         }
 
         boolean section4Opens = state.candidateRoles().stream()
@@ -434,7 +448,7 @@ public class AdaptiveRoutingEngine {
         }
 
         log.info("No specialist roles in candidate set for session {}. Advancing to TERMINAL_SCORING.", state.sessionId());
-        return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING);
+        return RoutingDecision.readyToPredict(state.candidateRoles(), FsmState.TERMINAL_SCORING, state.eliminationLog());
     }
 
     // ─── Psychometric Elimination Gates ──────────────────────────────────────
@@ -600,6 +614,123 @@ public class AdaptiveRoutingEngine {
                 .collect(Collectors.toList());
 
         return new GateResult(finalSurvivors, log);
+    }
+
+    /**
+     * Applies decisive pairwise resolver elimination based on Section 3 answers.
+     * If the user gave an extreme preference (5 or 1) on a pairwise discriminator question,
+     * the rejected role is pruned from candidates (while respecting the safety floor of 2 roles).
+     */
+    GateResult applyResolverGates(RoutingState state) {
+        List<Question> s3Questions = questionRepository.findBySectionIdOrderByIdAsc(3);
+        Map<String, String> eliminationReasons = new LinkedHashMap<>();
+        Map<Long, Integer> raw = state.rawAnswers();
+
+        for (Question q : s3Questions) {
+            Integer ans = raw.get(q.getId());
+            if (ans == null) continue;
+
+            // Pair A: Backend Developer vs Full Stack Developer (Q57, Q58)
+            // Option A = Full Stack, Option B = Backend
+            if (q.getText().contains("Build complete apps end-to-end") || q.getText().contains("Seeing users directly interact")) {
+                if (ans >= 5 && state.candidateRoles().contains("Backend Developer")) {
+                    eliminationReasons.put("Backend Developer",
+                            "In pairwise comparison, you strongly preferred full-stack end-to-end development over specialized backend server internals.");
+                } else if (ans <= 1 && state.candidateRoles().contains("Full Stack Developer")) {
+                    eliminationReasons.put("Full Stack Developer",
+                            "In pairwise comparison, you strongly preferred deep backend server architecture and data systems over full-stack breadth.");
+                }
+            }
+
+            // Pair B: Frontend Developer vs Android Developer (Q59, Q60)
+            if (q.getText().contains("open web with instant website links")) {
+                if (ans >= 5 && state.candidateRoles().contains("Android Developer")) {
+                    eliminationReasons.put("Android Developer",
+                            "In pairwise comparison, you strongly preferred open web architecture over native mobile app store development.");
+                } else if (ans <= 1 && state.candidateRoles().contains("Frontend Developer")) {
+                    eliminationReasons.put("Frontend Developer",
+                            "In pairwise comparison, you strongly preferred mobile applications over desktop web applications.");
+                }
+            } else if (q.getText().contains("phone hardware")) {
+                if (ans >= 5 && state.candidateRoles().contains("Frontend Developer")) {
+                    eliminationReasons.put("Frontend Developer",
+                            "In pairwise comparison, you strongly preferred mobile device hardware integration over desktop web development.");
+                } else if (ans <= 1 && state.candidateRoles().contains("Android Developer")) {
+                    eliminationReasons.put("Android Developer",
+                            "In pairwise comparison, you preferred open web design over mobile device hardware development.");
+                }
+            }
+
+            // Pair C: DevOps Engineer vs Cloud Engineer (Q61, Q62)
+            if (q.getText().contains("speeding up developer releases")) {
+                if (ans >= 5 && state.candidateRoles().contains("Cloud Engineer")) {
+                    eliminationReasons.put("Cloud Engineer",
+                            "In pairwise comparison, you strongly preferred software delivery pipelines and release velocity over cloud network infrastructure.");
+                } else if (ans <= 1 && state.candidateRoles().contains("DevOps Engineer")) {
+                    eliminationReasons.put("DevOps Engineer",
+                            "In pairwise comparison, you strongly preferred cloud network infrastructure over release pipeline scripting.");
+                }
+            } else if (q.getText().contains("automatically spin up cloud servers")) {
+                if (ans >= 5 && state.candidateRoles().contains("DevOps Engineer")) {
+                    eliminationReasons.put("DevOps Engineer",
+                            "In pairwise comparison, you strongly preferred automated cloud infrastructure provisioning over deployment pipeline configuration.");
+                } else if (ans <= 1 && state.candidateRoles().contains("Cloud Engineer")) {
+                    eliminationReasons.put("Cloud Engineer",
+                            "In pairwise comparison, you preferred build pipeline automation over cloud server provisioning.");
+                }
+            }
+
+            // Pair D: Data Scientist vs Data Engineer (Q63, Q64)
+            if (q.getText().contains("surprising statistical insight") || q.getText().contains("accuracy from 90% to 95%")) {
+                if (ans >= 5 && state.candidateRoles().contains("Data Engineer")) {
+                    eliminationReasons.put("Data Engineer",
+                            "In pairwise comparison, you strongly preferred predictive accuracy and statistical insights over high-throughput data plumbing.");
+                } else if (ans <= 1 && state.candidateRoles().contains("Data Scientist")) {
+                    eliminationReasons.put("Data Scientist",
+                            "In pairwise comparison, you strongly preferred building robust data pipelines and low-latency infrastructure over statistical model tuning.");
+                }
+            }
+
+            // Pair E: Cybersecurity Engineer vs QA / Test Automation Engineer (Q65, Q66)
+            if (q.getText().contains("how a malicious hacker could break") || q.getText().contains("Defending company data")) {
+                if (ans >= 5 && state.candidateRoles().contains("QA / Test Automation Engineer")) {
+                    eliminationReasons.put("QA / Test Automation Engineer",
+                            "In pairwise comparison, you strongly preferred adversarial security defense and threat protection over functional software testing.");
+                } else if (ans <= 1 && state.candidateRoles().contains("Cybersecurity Engineer")) {
+                    eliminationReasons.put("Cybersecurity Engineer",
+                            "In pairwise comparison, you strongly preferred software quality assurance and reliable user workflows over security exploit analysis.");
+                }
+            }
+
+            // Pair F: Full Stack Developer vs Frontend Developer (Q67, Q68)
+            if (q.getText().contains("visual animations, layout grids") || q.getText().contains("Staying strictly focused on visual design")) {
+                if (ans >= 5 && state.candidateRoles().contains("Full Stack Developer")) {
+                    eliminationReasons.put("Full Stack Developer",
+                            "In pairwise comparison, you strongly preferred dedicated UI and visual design over full-stack backend and database responsibilities.");
+                } else if (ans <= 1 && state.candidateRoles().contains("Frontend Developer")) {
+                    eliminationReasons.put("Frontend Developer",
+                            "In pairwise comparison, you preferred complete end-to-end full stack ownership over exclusively frontend layout work.");
+                }
+            }
+        }
+
+        List<String> survivors = state.candidateRoles().stream()
+                .filter(r -> !eliminationReasons.containsKey(r))
+                .collect(Collectors.toList());
+        List<String> finalSurvivors = enforceSafetyFloor(state.candidateRoles(), survivors);
+
+        Set<String> actuallyEliminated = new HashSet<>(eliminationReasons.keySet());
+        finalSurvivors.forEach(actuallyEliminated::remove);
+
+        List<EliminatedRole> elimLog = actuallyEliminated.stream()
+                .map(r -> EliminatedRole.builder()
+                        .role(r)
+                        .stage("RESOLVER")
+                        .reason(eliminationReasons.get(r))
+                        .build())
+                .collect(Collectors.toList());
+
+        return new GateResult(finalSurvivors, elimLog);
     }
 
     // ─── Question Selection Helpers ───────────────────────────────────────────

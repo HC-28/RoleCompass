@@ -34,6 +34,18 @@ public class Question {
     @Column(name = "trigger_predicate", columnDefinition = "jsonb")
     private String triggerPredicate;
 
+    /**
+     * Response instrument type telling the frontend which widget to render.
+     * <ul>
+     *   <li>{@code LIKERT_5}    — classic 5-point Strongly Disagree to Strongly Agree (Section 1)</li>
+     *   <li>{@code INTEREST_4}  — 4-point interest+exposure scale, no neutral trap (Sections 2 & 4)</li>
+     *   <li>{@code PREFERENCE_4} — 4-point bipolar forced-choice between two poles (Section 3)</li>
+     * </ul>
+     */
+    @Column(name = "response_type", length = 20)
+    @Builder.Default
+    private String responseType = "STYLE_5";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

@@ -1,6 +1,6 @@
 import Header from './Header'
 
-export default function Layout({ children }) {
+export default function Layout({ children, isAssessmentActive = false, onExitConfirm }) {
   return (
     <div className="app-background flex min-h-screen flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-600 dark:selection:bg-indigo-500/30 dark:selection:text-indigo-400">
       {/* Ambient background mesh gradient effects */}
@@ -17,7 +17,7 @@ export default function Layout({ children }) {
 
       {/* Main App Canvas */}
       <div className="relative z-10 flex min-h-screen flex-col">
-        <Header />
+        <Header isAssessmentActive={isAssessmentActive} onExitConfirm={onExitConfirm} />
 
         <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-4 pt-20 pb-12 sm:px-6 sm:pt-24 sm:pb-16 lg:px-8">
           {children}

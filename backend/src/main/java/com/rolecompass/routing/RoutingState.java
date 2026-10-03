@@ -185,6 +185,19 @@ public record RoutingState(
     }
 
     /**
+     * Returns a new RoutingState with both candidate roles and elimination log updated.
+     */
+    public RoutingState withCandidatesAndEliminationLog(List<String> newCandidates, List<EliminatedRole> newEntries) {
+        List<EliminatedRole> merged = new ArrayList<>(eliminationLog);
+        merged.addAll(newEntries);
+        return new RoutingState(
+                sessionId, fsmState, new ArrayList<>(newCandidates),
+                psychProfile, techVector, answeredCount, answeredQuestionIds,
+                rawAnswers, merged, mlConfidenceMargin, mlTopRoles
+        );
+    }
+
+    /**
      * Returns a new RoutingState with updated ML confidence preview margin and top roles.
      */
     public RoutingState withMlPreview(Double margin, List<String> topRoles) {

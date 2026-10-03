@@ -82,6 +82,7 @@ public class QuestionService {
                 .id(q.getId())
                 .text(q.getText())
                 .options(List.of(1, 2, 3, 4, 5))
+                .responseType(q.getResponseType() != null ? q.getResponseType() : "LIKERT_5")
                 .sectionNumber(sectionId)
                 .sectionLabel(SectionMetadata.SECTION_LABELS.get(sectionId))
                 .subsectionLabel(SectionMetadata.resolveSubsectionLabel(sectionId, primaryTag))

@@ -1,5 +1,6 @@
 import {
   Award,
+  Brain,
   Calendar,
   CheckCircle,
   ChevronDown,
@@ -10,7 +11,10 @@ import {
   ListOrdered,
   Mail,
   Play,
+  Sparkles,
+  Terminal,
   User as UserIcon,
+  XCircle,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -275,7 +279,51 @@ export default function ProfilePage() {
 
                     {/* Expandable Questions & Answers Detail List */}
                     {isExpanded && (
-                      <div className="border-t border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 space-y-4">
+                      <div className="border-t border-slate-200/80 dark:border-slate-800/80 p-5 sm:p-6 space-y-6">
+                        {/* Eliminated Roles Section */}
+                        {session.eliminated_roles && session.eliminated_roles.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                <XCircle className="h-3.5 w-3.5 text-rose-500" />
+                                <span>Adaptive Routing: Disqualified Roles ({session.eliminated_roles.length})</span>
+                              </h4>
+                              <span className="text-[11px] text-slate-400">Pruned during assessment gates</span>
+                            </div>
+
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800/60 rounded-xl border border-slate-200/70 dark:border-slate-800/70 bg-white dark:bg-slate-900/40 overflow-hidden">
+                              {session.eliminated_roles.map((elim) => {
+                                const isPsych = elim.stage === 'PSYCHOMETRIC'
+                                return (
+                                  <div key={elim.role} className="p-3.5 space-y-1.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2">
+                                        <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                          {elim.role}
+                                        </span>
+                                      </div>
+                                      <span
+                                        className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold ${
+                                          isPsych
+                                            ? 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
+                                            : 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300'
+                                        }`}
+                                      >
+                                        {isPsych ? <Brain className="h-2.5 w-2.5" /> : <Terminal className="h-2.5 w-2.5" />}
+                                        <span>{isPsych ? 'Psychometric Gate' : 'Technical Floor Gate'}</span>
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-5 leading-relaxed">
+                                      {elim.reason}
+                                    </p>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                             Questions Asked in this Assessment ({qaList.length})

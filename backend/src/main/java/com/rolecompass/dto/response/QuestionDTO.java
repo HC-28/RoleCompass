@@ -30,9 +30,20 @@ public class QuestionDTO {
     /** The question statement shown to the candidate. */
     private String text;
 
-    /** Likert scale options: always [1, 2, 3, 4, 5]. */
+    /** Likert scale options: always [1, 2, 3, 4, 5]. Present for legacy compatibility. */
     @Builder.Default
     private List<Integer> options = List.of(1, 2, 3, 4, 5);
+
+    /**
+     * Response instrument type. Tells the frontend which widget component to render:
+     * <ul>
+     *   <li>{@code LIKERT_5}     — classic 5-point agreement scale (Section 1)</li>
+     *   <li>{@code INTEREST_4}   — 4-point interest+exposure scale, no neutral (Sections 2 & 4)</li>
+     *   <li>{@code PREFERENCE_4} — 4-point bipolar forced-choice scale (Section 3)</li>
+     * </ul>
+     */
+    @JsonProperty("response_type")
+    private String responseType;
 
     /** Section number (1–4) this question belongs to. */
     @JsonProperty("section_number")

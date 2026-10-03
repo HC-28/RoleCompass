@@ -151,7 +151,7 @@ public class SessionService {
         // Persist the elimination log accumulated so far into the session
         // (may be empty if no gate fired yet — that is fine)
         try {
-            String logJson = objectMapper.writeValueAsString(routingState.eliminationLog());
+            String logJson = objectMapper.writeValueAsString(decision.eliminationLog());
             session.setEliminationLogJson(logJson);
         } catch (Exception e) {
             log.warn("Could not serialise elimination log for session {}: {}", sessionId, e.getMessage());
@@ -162,6 +162,10 @@ public class SessionService {
         response.put("answers_count", totalAnswered);
         response.put("fsm_state", decision.nextFsmState().name());
         response.put("section_number", sectionNumberFor(decision.nextFsmState()));
+        // candidate_roles: surviving role names after this routing step.
+        // React renders this list as-is — no business logic on the client.
+        response.put("candidate_roles", decision.survivingRoles());
+        response.put("eliminated_roles", decision.eliminationLog());
 
         if (decision.readyToPredict()) {
             session.setStatus("ready_to_predict");
@@ -220,6 +224,7 @@ public class SessionService {
                 .confidence(response.getConfidence())
                 .alternates(response.getAlternates())
                 .eliminatedRoles(eliminatedRoles)
+                .fallback(response.isFallback())
                 .build();
 
         session.setStatus("completed");
@@ -268,6 +273,7 @@ public class SessionService {
             sessionData.put("confidence", session.getConfidence());
             sessionData.put("created_at", session.getCreatedAt());
             sessionData.put("updated_at", session.getUpdatedAt());
+            sessionData.put("eliminated_roles", deserialiseEliminationLog(session));
 
             List<Answer> answers = answerRepository.findByIdSessionId(session.getId());
             sessionData.put("total_questions_answered", answers.size());

@@ -12,4 +12,5 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     List<Question> findBySectionIdOrderByIdAsc(Integer sectionId);
     List<Question> findBySectionIdInOrderBySectionIdAscIdAsc(Collection<Integer> sectionIds);
     List<Question> findAllByOrderByIdAsc();
+    long countByResponseTypeIsNull();
 }
