@@ -18,8 +18,11 @@ __pycache__/
 *$py.class
 .pytest_cache/
 ml/build_log.txt
-# (Optional: uncomment if you don't want to commit trained model binaries)
-# *.pkl
+ml/dataset/so_*.csv
+ml/dataset/survey_results_public.csv
+ml/dataset/rolecompass_training.csv
+*.pdf
+*.pkl
 
 # --- Node & Frontend ---
 frontend/node_modules/
