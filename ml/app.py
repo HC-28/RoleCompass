@@ -93,6 +93,10 @@ class ScoreResponse(BaseModel):
     predicted_role: str
     confidence: float
     alternates: List[AlternateRole]
+    # Full probability distribution over all known roles.
+    # Keys are role names; values are raw model probabilities (sum ≈ 1.0 over all classes,
+    # NOT renormalized to candidate_roles — backend uses this for Bayesian adjustment).
+    all_probabilities: dict
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
@@ -154,10 +158,14 @@ def score(req: ScoreRequest) -> ScoreResponse:
             if role != predicted_role
         ][:2]
 
+    # Build full probability map over ALL known roles (not just candidates)
+    all_probabilities = {role: float(conf) for role, conf in zip(class_names, proba)}
+
     return ScoreResponse(
         predicted_role=predicted_role,
         confidence=float(predicted_conf),
-        alternates=alternates
+        alternates=alternates,
+        all_probabilities=all_probabilities
     )
 
 

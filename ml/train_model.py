@@ -1,8 +1,14 @@
 """
 RoleCompass — ML Training Script
 ==================================
-Trains on ONLY the 20 technical features. The 11 psychometric features
-(R, I, A, S, E, C, DI, TP, BD, SA, RO) are explicitly dropped before fitting.
+Trains on ONLY the 20 technical features.
+
+Data source: ml/dataset/rolecompass_training.csv
+  - 110,000+ real developer profiles from Stack Overflow surveys 2021 + 2022
+  - +12,000 targeted synthetic rows to balance underrepresented roles
+    (Cybersecurity: +3500, AI/ML Eng: +2000, Mobile: +1500, Data Scientist: +1500,
+     Cloud: +1500, QA: +1000, DE: +500)
+  - Total: ~122,000 rows across 11 roles
 
 This separation is architecturally non-negotiable: the routing engine uses
 psychometric dimensions; the ML model uses only technical skill dimensions.
@@ -35,14 +41,22 @@ PSYCH_FEATURES = ['R', 'I', 'A', 'S', 'E', 'C', 'DI', 'TP', 'BD', 'SA', 'RO']
 
 
 def train():
-    data_path = 'dataset/rolecompass_synthetic.csv'
-    if not os.path.exists(data_path):
-        print(f"[ERROR] Dataset not found at {data_path}. Run generate_dataset.py first.")
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    for rel_path in ['dataset/rolecompass_training.csv', 'dataset/rolecompass_synthetic.csv']:
+        data_path = os.path.join(BASE_DIR, rel_path)
+        if os.path.exists(data_path):
+            break
+    else:
+        print("[ERROR] No training dataset found. Run build_training_dataset.py first.")
         return
 
     df = pd.read_csv(data_path)
-    print(f"Dataset loaded: {df.shape[0]} rows, {df.shape[1]} columns")
-    print(f"Roles in dataset: {sorted(df['role'].unique())}")
+    print(f"Dataset: {data_path}")
+    print(f"Loaded: {df.shape[0]:,} rows, {df.shape[1]} columns")
+    print(f"Roles: {sorted(df['role'].unique())}")
+    print(f"\nSamples per role:")
+    for role, cnt in df['role'].value_counts().items():
+        print(f"  {role:<42} {cnt:>7,}")
 
     # Validate all required columns exist
     missing = [f for f in TECH_FEATURES if f not in df.columns]
@@ -69,10 +83,13 @@ def train():
     print(f"\nTrain size: {len(X_train)}, Test size: {len(X_test)}")
 
     # --- Random Forest ---
+    # n_estimators=400: more trees = more stable predictions on 120k rows
+    # max_depth=15: deeper trees capture nuanced tech signal combinations
+    # min_samples_leaf=4: prevents overfitting individual SO survey quirks
     rf = RandomForestClassifier(
-        n_estimators=300,
-        max_depth=12,
-        min_samples_leaf=2,
+        n_estimators=400,
+        max_depth=15,
+        min_samples_leaf=4,
         class_weight='balanced',
         random_state=42,
         n_jobs=-1
@@ -112,11 +129,11 @@ def train():
     print(f"\nBaseline Decision Tree Test Macro F1: {dt_f1:.4f}")
     print(f"Random Forest Test Macro F1:          {rf_f1:.4f}")
 
-    # Save models
-    joblib.dump(rf, 'role_predictor.pkl')
-    joblib.dump(dt, 'baseline_tree.pkl')
-    joblib.dump(le, 'label_encoder.pkl')
-    print("\n[OK] Models saved: role_predictor.pkl, baseline_tree.pkl, label_encoder.pkl")
+    # Save models (with compression to stay well under GitHub 100MB file limit)
+    joblib.dump(rf, os.path.join(BASE_DIR, 'role_predictor.pkl'), compress=3)
+    joblib.dump(dt, os.path.join(BASE_DIR, 'baseline_tree.pkl'))
+    joblib.dump(le, os.path.join(BASE_DIR, 'label_encoder.pkl'))
+    print("\n[OK] Models saved to ml/: role_predictor.pkl, baseline_tree.pkl, label_encoder.pkl")
     print(f"[OK] Model input dimensionality: {len(TECH_FEATURES)} features")
     print(f"[OK] Model output classes: {list(le.classes_)}")
 
