@@ -45,23 +45,16 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         List<Question> existing = questionRepository.findAll();
         long count = existing.size();
+        long s1Count = existing.stream().filter(q -> q.getSectionId() != null && q.getSectionId() == 1).count();
         long nullResponseTypes = existing.stream().filter(q -> q.getResponseType() == null).count();
-        boolean hasUpdatedText = existing.stream()
-                .filter(q -> q.getSectionId() != null && q.getSectionId() == 3)
-                .findFirst()
-                .map(q -> q.getText() != null && q.getText().contains("Option A:"))
-                .orElse(false);
 
-        if (count == 84 && nullResponseTypes == 0 && hasUpdatedText) {
-            log.info("All 84 RoleCompass questions already up-to-date with response types. Skipping DataSeeder.");
+        // Expected: 12 (S1) + 20 (S2) + 7 (S3) + 15 (S4) = 54 questions total
+        if (count == 54 && s1Count == 12 && nullResponseTypes == 0) {
+            log.info("All 54 RoleCompass questions already up-to-date. Skipping DataSeeder.");
             return;
         }
 
-        if (count == 84 && (!hasUpdatedText || nullResponseTypes > 0)) {
-            log.info("Found outdated questions or NULL response_types. Reseeding with simplified questions...");
-        } else {
-            log.info("Expected 84 questions but found {}. Seeding RoleCompass questions cleanly...", count);
-        }
+        log.info("Expected 54 questions (S1=12, S2=20, S3=7, S4=15) but found total={}, S1={}. Reseeding...", count, s1Count);
         answerRepository.deleteAllInBatch();
         questionRepository.deleteAllInBatch();
 
@@ -79,197 +72,149 @@ public class DataSeeder implements ApplicationRunner {
                 buildSection2Tech().size(),
                 buildSection3Resolver().size(),
                 buildSection4Specialist().size());
+
+        if (all.size() != 54) {
+            log.warn("WARN: Expected 54 questions but seeded {}. Check buildSection* methods.", all.size());
+        }
     }
 
-    // ─── Section 1 — 16 Psychometric / RIASEC Questions ──────────────────────
-    // Measures 11 psychometric dimensions: R, I, A, S, E, C, DI, TP, BD, SA, RO.
+    // ─── Section 1 — 12 Psychometric / RIASEC Questions ──────────────────────
+    // Measures 6 core Holland RIASEC dimensions (2 questions each): R, I, A, S, E, C.
+    // Directly drives the psychometric routing gates (R, I, A, C) and Holland profile (S, E).
     // All questions are mandatory (sectionId=1, always triggered).
 
     public static List<Question> buildSection1() {
         return List.of(
-            q(1, "I'd rather spend an afternoon tinkering with hardware or building something hands-on than studying abstract theory.",
+            // REALISTIC (R) — Hands-on builder, enjoys making things work
+            q(1, "When something at home or on a computer breaks down, your first instinct is to roll up your sleeves and figure out how to fix it yourself.",
+                new String[]{FeatureIndex.TAG_DIM_REALISTIC}, always()),
+            q(1, "You feel genuinely satisfied when you finish building something that actually works — whether it's a small program, a gadget setup, or a physical project.",
                 new String[]{FeatureIndex.TAG_DIM_REALISTIC}, always()),
 
-            q(1, "When a gadget or technical setup stops working, my immediate instinct is to open it up and fix it myself.",
-                new String[]{FeatureIndex.TAG_DIM_REALISTIC, FeatureIndex.TAG_DIM_THINGS_PEOPLE}, always()),
-
-            q(1, "I love digging into technical manuals or documentation to understand how things work under the hood.",
+            // INVESTIGATIVE (I) — Analytical thinker, curious about how things work
+            q(1, "When you don't understand how something works, you feel genuinely curious and can't help but dig deeper until it makes sense.",
+                new String[]{FeatureIndex.TAG_DIM_INVESTIGATIVE}, always()),
+            q(1, "You enjoy thinking through difficult problems step by step — finding the logical answer is more satisfying to you than leaving things unexplained.",
                 new String[]{FeatureIndex.TAG_DIM_INVESTIGATIVE}, always()),
 
-            q(1, "I get excited by open-ended problems that don't have an obvious textbook answer.",
-                new String[]{FeatureIndex.TAG_DIM_INVESTIGATIVE, FeatureIndex.TAG_DIM_STRUCT_AMBIG}, always()),
-
-            q(1, "I care a lot about visual design — it genuinely bothers me when an app looks ugly or clunky.",
+            // ARTISTIC (A) — Visual and creative, cares about how things look and feel
+            q(1, "It genuinely bothers you when an app or website looks cluttered, unbalanced, or visually unappealing — you notice design details most people miss.",
+                new String[]{FeatureIndex.TAG_DIM_ARTISTIC}, always()),
+            q(1, "You enjoy choosing colors, layouts, and visual styles — making something look polished and beautiful gives you real creative satisfaction.",
                 new String[]{FeatureIndex.TAG_DIM_ARTISTIC}, always()),
 
-            q(1, "I feel frustrated when strict rules or rigid templates limit my creative freedom.",
-                new String[]{FeatureIndex.TAG_DIM_ARTISTIC, FeatureIndex.TAG_DIM_CONVENTIONAL}, always()),
-
-            q(1, "I prefer following a clear, proven step-by-step process rather than making up workflows from scratch.",
-                new String[]{FeatureIndex.TAG_DIM_CONVENTIONAL}, always()),
-
-            q(1, "When instructions are unclear, I'd rather ask for formal guidance than guess and improvise.",
-                new String[]{FeatureIndex.TAG_DIM_CONVENTIONAL, FeatureIndex.TAG_DIM_STRUCT_AMBIG}, always()),
-
-            q(1, "In team projects, I naturally step up to set goals, delegate tasks, and drive decisions.",
-                new String[]{FeatureIndex.TAG_DIM_ENTERPRISING}, always()),
-
-            q(1, "I solve problems much better by bouncing ideas off other people than by sitting alone in a room.",
+            // SOCIAL (S) — Team player, energized by helping others
+            q(1, "You find that you think better and get more done when you can bounce ideas off teammates rather than working completely alone.",
+                new String[]{FeatureIndex.TAG_DIM_SOCIAL}, always()),
+            q(1, "Knowing that your work directly helped someone — made their job easier, solved their problem, or improved their day — is what motivates you most.",
                 new String[]{FeatureIndex.TAG_DIM_SOCIAL}, always()),
 
-            q(1, "I trust hard numbers and measurable proof much more than gut feelings or personal opinions.",
-                new String[]{FeatureIndex.TAG_DIM_DATA_IDEAS}, always()),
+            // ENTERPRISING (E) — Leader, persuader, results-driven
+            q(1, "In group projects, you naturally end up being the one who organizes tasks, suggests ideas, and keeps the team on track.",
+                new String[]{FeatureIndex.TAG_DIM_ENTERPRISING}, always()),
+            q(1, "The idea of building a product, pitching it to people, and watching it get used in the real world genuinely excites you.",
+                new String[]{FeatureIndex.TAG_DIM_ENTERPRISING}, always()),
 
-            q(1, "I find it more rewarding to make systems run fast and reliably than to focus on human emotions or marketing.",
-                new String[]{FeatureIndex.TAG_DIM_THINGS_PEOPLE}, always()),
-
-            q(1, "I can happily spend hours hunting down a mysterious bug with no guarantee of a quick fix.",
-                new String[]{FeatureIndex.TAG_DIM_STRUCT_AMBIG}, always()),
-
-            q(1, "When I spot a tiny flaw in my work, I feel compelled to fix it even if no one else notices.",
-                new String[]{FeatureIndex.TAG_DIM_BREADTH_DEPTH}, always()),
-
-            q(1, "I'd rather build a quick, rough prototype in two days than spend two weeks planning the perfect design.",
-                new String[]{FeatureIndex.TAG_DIM_BREADTH_DEPTH, FeatureIndex.TAG_DIM_DATA_IDEAS}, always()),
-
-            q(1, "Whenever I look at a new app or system, my first thought is how someone could break or exploit it.",
-                new String[]{FeatureIndex.TAG_DIM_OFFENSE_DEF}, always())
+            // CONVENTIONAL (C) — Structured, precise, likes clear rules and verification
+            q(1, "You work best when you have a clear checklist or step-by-step plan — knowing exactly what \"done\" looks like helps you stay focused.",
+                new String[]{FeatureIndex.TAG_DIM_CONVENTIONAL}, always()),
+            q(1, "You feel uncomfortable leaving work in a gray area — you'd rather double-check something twice than ship something that might have an error.",
+                new String[]{FeatureIndex.TAG_DIM_CONVENTIONAL}, always())
         );
     }
 
-    // ─── Section 2 — 40 Technical Core Questions (2 per feature × 20 features) ─
-    // Every user receives all applicable questions. The routing engine applies the
-    // adaptive skip rule per domain: if Q1 answer is extreme (≤ 2 or ≥ 4), Q2
-    // for that domain is skipped (domain is considered resolved).
-    // sectionId=2, always triggered — Q1 always, Q2 conditionally via engine.
+    // ─── Section 2 — 20 Technical Interest Questions (1 per feature) ──────────
+    // One question per feature — no adaptive Q2. Simple and direct.
+    // Each question is a concrete curiosity check: "Does this sound interesting?"
+    // sectionId=2, all always triggered.
 
     public static List<Question> buildSection2Tech() {
         return List.of(
 
-            // FEATURE 01: SERVER LOGIC (TECH_SERVER_LOGIC)
-            q(2, "Writing the core backend logic that validates user input, processes payments, and runs business rules sounds engaging.",
-                new String[]{FeatureIndex.TAG_TECH_SERVER_LOGIC}, always()),
-            q(2, "Figuring out what happens when thousands of people try to buy the exact same ticket at the exact same second sounds like a fascinating puzzle.",
+            // FEATURE 01: SERVER LOGIC
+            q(2, "Does making the \"behind the scenes\" part of an app — the part that checks your login, processes your order, and handles everyone's requests at once — sound like interesting work to you?",
                 new String[]{FeatureIndex.TAG_TECH_SERVER_LOGIC}, always()),
 
-            // FEATURE 02: DATA STORAGE (TECH_DATA_STORAGE)
-            q(2, "Designing clean database tables so information is neatly organized without messy duplication sounds appealing.",
-                new String[]{FeatureIndex.TAG_TECH_DATA_STORAGE}, always()),
-            q(2, "Speeding up slow database searches so user queries load in milliseconds instead of seconds sounds rewarding.",
+            // FEATURE 02: DATA STORAGE
+            q(2, "Does organizing and storing information in databases — making sure data is clean, fast to find, and never lost — sound like something you'd enjoy working on?",
                 new String[]{FeatureIndex.TAG_TECH_DATA_STORAGE}, always()),
 
-            // FEATURE 03: API DESIGN (TECH_API_DESIGN)
-            q(2, "Creating simple, clean connection points so web and mobile apps can easily talk to the server sounds exciting.",
-                new String[]{FeatureIndex.TAG_TECH_API_DESIGN}, always()),
-            q(2, "Learning how data travels across the internet through network requests, live streams, and security tokens sounds interesting.",
+            // FEATURE 03: API DESIGN
+            q(2, "Does building the connection layer that lets apps and websites talk to servers and share data between each other sound interesting to you?",
                 new String[]{FeatureIndex.TAG_TECH_API_DESIGN}, always()),
 
-            // FEATURE 04: UI RENDERING (TECH_UI_RENDERING)
-            q(2, "Writing code to build responsive buttons, interactive animations, and sleek visual layouts sounds rewarding.",
-                new String[]{FeatureIndex.TAG_TECH_UI_RENDERING}, always()),
-            q(2, "Tweaking styling and layout grids so a webpage looks gorgeous on both mobile phones and desktop monitors sounds satisfying.",
+            // FEATURE 04: UI RENDERING
+            q(2, "Does writing code to create buttons, animations, and visual layouts that users see and click on — making screens look great and feel smooth — sound exciting to you?",
                 new String[]{FeatureIndex.TAG_TECH_UI_RENDERING}, always()),
 
-            // FEATURE 05: STATE MANAGEMENT (TECH_STATE_MGMT)
-            q(2, "Keeping an app's visual screen instantly updated with live data whenever a user clicks or types sounds exciting.",
-                new String[]{FeatureIndex.TAG_TECH_STATE_MGMT}, always()),
-            q(2, "Hunting down frustrating bugs where rapidly clicking buttons makes screens show glitchy or outdated information sounds like an engaging challenge.",
+            // FEATURE 05: STATE MANAGEMENT
+            q(2, "Does making sure an app's screen updates instantly when someone clicks, types, or gets a new notification — keeping everything in sync without glitches — sound like an interesting challenge?",
                 new String[]{FeatureIndex.TAG_TECH_STATE_MGMT}, always()),
 
-            // FEATURE 06: BUILD PIPELINES (TECH_BUILD_PIPELINE)
-            q(2, "Setting up automated tools that compile, test, and bundle code into a finished app automatically sounds appealing.",
-                new String[]{FeatureIndex.TAG_TECH_BUILD_PIPELINE}, always()),
-            q(2, "Solving head-scratching dependency conflicts when a project runs fine on your laptop but fails to build elsewhere is a challenge I would happily tackle.",
+            // FEATURE 06: BUILD PIPELINES
+            q(2, "Does setting up systems that automatically check, test, and package your code every time you make a change — so it's always ready to ship — sound appealing to you?",
                 new String[]{FeatureIndex.TAG_TECH_BUILD_PIPELINE}, always()),
 
-            // FEATURE 07: INFRASTRUCTURE PROVISIONING (TECH_INFRA_PROVISION)
-            q(2, "Working directly in the command line terminal using shell scripts to manage operating systems feels natural and comfortable.",
-                new String[]{FeatureIndex.TAG_TECH_INFRA_PROVISION}, always()),
-            q(2, "Learning how internet traffic flows through IP addresses, domains, firewalls, and server gateways sounds engaging.",
+            // FEATURE 07: INFRASTRUCTURE PROVISIONING
+            q(2, "Does managing servers and computers using typed commands and scripts — instead of clicking through menus — sound like something you'd be comfortable with?",
                 new String[]{FeatureIndex.TAG_TECH_INFRA_PROVISION}, always()),
 
-            // FEATURE 08: CONTAINER ORCHESTRATION (TECH_CONTAINER_ORCH)
-            q(2, "Packaging applications into lightweight containers so they run identically on any computer or server sounds like smart engineering.",
-                new String[]{FeatureIndex.TAG_TECH_CONTAINER_ORCH}, always()),
-            q(2, "Setting up smart systems that automatically spin up more servers when traffic spikes and restart them if they crash sounds interesting.",
+            // FEATURE 08: CONTAINER ORCHESTRATION
+            q(2, "Does packaging an entire app and all its settings into a neat bundle that runs the same way on any computer — and letting a system manage hundreds of those bundles automatically — sound clever and interesting to you?",
                 new String[]{FeatureIndex.TAG_TECH_CONTAINER_ORCH}, always()),
 
-            // FEATURE 09: CLOUD SERVICES (TECH_CLOUD_SERVICES)
-            q(2, "Building modern applications using managed cloud services instead of maintaining physical hardware sounds exciting.",
-                new String[]{FeatureIndex.TAG_TECH_CLOUD_SERVICES}, always()),
-            q(2, "Architecting cloud networks spread across different countries so apps stay online even during major regional power cuts sounds like an engaging challenge.",
+            // FEATURE 09: CLOUD SERVICES
+            q(2, "Does building and running apps on remote cloud platforms like AWS or Google Cloud — instead of buying and managing your own physical servers — sound exciting to you?",
                 new String[]{FeatureIndex.TAG_TECH_CLOUD_SERVICES}, always()),
 
-            // FEATURE 10: STATISTICAL ANALYSIS (TECH_STAT_ANALYSIS)
-            q(2, "Exploring datasets using probability, charts, and mathematical trends to uncover hidden patterns feels natural to me.",
-                new String[]{FeatureIndex.TAG_TECH_STAT_ANALYSIS}, always()),
-            q(2, "Checking whether a sudden spike in data is a genuine trend or just misleading noise and random coincidence sounds like second nature.",
+            // FEATURE 10: STATISTICAL ANALYSIS
+            q(2, "Does exploring data using numbers, averages, and charts to uncover hidden patterns or spot whether something is a real trend or just random noise sound interesting to you?",
                 new String[]{FeatureIndex.TAG_TECH_STAT_ANALYSIS}, always()),
 
-            // FEATURE 11: MODEL BUILDING (TECH_MODEL_BUILDING)
-            q(2, "Training and tuning machine learning models to make smart predictions or detect patterns in data sounds exciting.",
-                new String[]{FeatureIndex.TAG_TECH_MODEL_BUILDING}, always()),
-            q(2, "Investigating why an AI model made mistakes on certain edge cases and adjusting the training data to make it smarter sounds rewarding.",
+            // FEATURE 11: MODEL BUILDING
+            q(2, "Does training a computer program to make predictions or recognize patterns by feeding it examples — like teaching it to detect spam or recommend songs — sound like fascinating work?",
                 new String[]{FeatureIndex.TAG_TECH_MODEL_BUILDING}, always()),
 
-            // FEATURE 12: DATA PIPELINES (TECH_DATA_PIPELINE)
-            q(2, "Building high-speed data plumbing that ingests and cleans millions of real-time events every hour sounds thrilling.",
-                new String[]{FeatureIndex.TAG_TECH_DATA_PIPELINE}, always()),
-            q(2, "Ensuring massive company datasets are clean, verified, and free of duplicate records before analysts use them sounds satisfying.",
+            // FEATURE 12: DATA PIPELINES
+            q(2, "Does building systems that automatically collect, clean, and organize huge amounts of data from many sources — so analysts and apps always have fresh, reliable information — sound like something you'd enjoy?",
                 new String[]{FeatureIndex.TAG_TECH_DATA_PIPELINE}, always()),
 
-            // FEATURE 13: MOBILE CLIENT (TECH_MOBILE_CLIENT)
-            q(2, "Creating mobile apps designed to run smoothly while saving phone battery, memory, and working offline sounds engaging.",
-                new String[]{FeatureIndex.TAG_TECH_MOBILE_CLIENT}, always()),
-            q(2, "Building native apps specifically for smartphones and publishing them on mobile app stores sounds like a compelling path.",
+            // FEATURE 13: MOBILE CLIENT
+            q(2, "Does building apps designed specifically for smartphones — things people download and install on their phones — sound like an exciting path?",
                 new String[]{FeatureIndex.TAG_TECH_MOBILE_CLIENT}, always()),
 
-            // FEATURE 14: THREAT ANALYSIS (TECH_THREAT_ANALYSIS)
-            q(2, "Looking at any website or login screen and thinking: 'How could a hacker sneak in or steal data here?' sounds like my kind of problem.",
-                new String[]{FeatureIndex.TAG_TECH_THREAT_ANALYSIS}, always()),
-            q(2, "Researching famous cybersecurity exploits and learning step-by-step how hackers breach secure systems sounds genuinely exciting.",
+            // FEATURE 14: THREAT ANALYSIS
+            q(2, "When you use an app or website, do you find yourself thinking about how someone might be able to break into it, steal data, or exploit a weakness — and does finding those gaps sound exciting?",
                 new String[]{FeatureIndex.TAG_TECH_THREAT_ANALYSIS}, always()),
 
-            // FEATURE 15: SYSTEM HARDENING (TECH_SYSTEM_HARDENING)
-            q(2, "Locking down servers and databases with strong encryption, strict permissions, and secure digital keys sounds satisfying.",
-                new String[]{FeatureIndex.TAG_TECH_SYSTEM_HARDENING}, always()),
-            q(2, "Auditing company networks and security logs to ensure all computers meet strict defense standards sounds worthwhile.",
+            // FEATURE 15: SYSTEM HARDENING
+            q(2, "Does protecting computer systems by setting up strong passwords, encryption, and access rules — making sure only the right people can get in — sound like satisfying, important work?",
                 new String[]{FeatureIndex.TAG_TECH_SYSTEM_HARDENING}, always()),
 
-            // FEATURE 16: TEST DESIGN (TECH_TEST_DESIGN)
-            q(2, "Trying to break software on purpose by typing weird, unexpected inputs until it crashes gives me genuine satisfaction.",
-                new String[]{FeatureIndex.TAG_TECH_TEST_DESIGN}, always()),
-            q(2, "Creating organized testing checklists to guarantee that new code updates don't break existing features sounds satisfying.",
+            // FEATURE 16: TEST DESIGN
+            q(2, "Does deliberately trying to break software by testing edge cases and weird inputs — to find bugs before users do — sound like something you'd enjoy?",
                 new String[]{FeatureIndex.TAG_TECH_TEST_DESIGN}, always()),
 
-            // FEATURE 17: TEST AUTOMATION (TECH_TEST_AUTOMATION)
-            q(2, "Writing automated scripts that simulate user clicks and form submissions to test an entire app in seconds sounds exciting.",
-                new String[]{FeatureIndex.TAG_TECH_TEST_AUTOMATION}, always()),
-            q(2, "Fixing flaky automated tests that randomly pass or fail due to network lag so tests are 100% trustworthy sounds satisfying.",
+            // FEATURE 17: TEST AUTOMATION
+            q(2, "Does writing programs that automatically test an entire app — simulating user clicks and actions — so you never have to manually check the same thing twice sound satisfying to you?",
                 new String[]{FeatureIndex.TAG_TECH_TEST_AUTOMATION}, always()),
 
-            // FEATURE 18: OBSERVABILITY (TECH_OBSERVABILITY)
-            q(2, "Creating live visual control screens and alert monitors to spot server slowdowns before users notice sounds interesting.",
-                new String[]{FeatureIndex.TAG_TECH_OBSERVABILITY}, always()),
-            q(2, "Troubleshooting a sudden system outage and hunting through server error logs to find what broke sounds like a challenge I would enjoy.",
+            // FEATURE 18: OBSERVABILITY
+            q(2, "Does setting up dashboards and alerts that tell you exactly when and where something goes wrong in a live system — so you can fix it before users even notice — sound like engaging work?",
                 new String[]{FeatureIndex.TAG_TECH_OBSERVABILITY}, always()),
 
-            // FEATURE 19: PERFORMANCE OPTIMISATION (TECH_PERF_OPTIM)
-            q(2, "Investigating why an app is lagging or freezing up and tweaking code until it runs silky smooth sounds deeply engaging.",
-                new String[]{FeatureIndex.TAG_TECH_PERF_OPTIM}, always()),
-            q(2, "Designing fast memory caching so users get instant responses without overloading the database sounds rewarding.",
+            // FEATURE 19: PERFORMANCE OPTIMISATION
+            q(2, "Does investigating why an app feels slow or crashes under heavy use, then figuring out how to make it run fast and smooth for thousands of users at once, sound deeply satisfying to you?",
                 new String[]{FeatureIndex.TAG_TECH_PERF_OPTIM}, always()),
 
-            // FEATURE 20: FULL SPECTRUM DELIVERY (TECH_FULL_SPECTRUM)
-            q(2, "Building complete features from scratch — designing the screen, writing the API, and storing the data myself — feels more fulfilling than doing only one side.",
-                new String[]{FeatureIndex.TAG_TECH_FULL_SPECTRUM}, always()),
-            q(2, "I would rather pick an existing tool or framework to get a working feature into users' hands quickly than spend three days writing a custom solution.",
+            // FEATURE 20: FULL SPECTRUM DELIVERY
+            q(2, "Does building a complete feature from scratch — designing the screen, writing the server, and storing the data yourself — feel more fulfilling than focusing on just one part?",
                 new String[]{FeatureIndex.TAG_TECH_FULL_SPECTRUM}, always())
         );
     }
 
-    // ─── Section 3 — 12 Role-Pair Resolver Questions (Conditional) ───────────
-    // 6 competing role pairs × 2 questions each.
+    // ─── Section 3 — 7 Role-Pair Resolver Questions (Conditional) ────────────
+    // 7 competing role pairs × 1 question each.
     // Each question has a requires_both predicate; only fired if both roles
     // in the pair are still active candidates after Section 2 pruning.
     // sectionId=3.
@@ -278,78 +223,68 @@ public class DataSeeder implements ApplicationRunner {
         return List.of(
 
             // PAIR A: BACKEND DEVELOPER vs FULL STACK DEVELOPER
-            q(3, "Which path excites you more? | Option A: Build complete apps end-to-end (UI, backend & database) | Option B: Focus deeply on server performance, concurrency & databases",
+            q(3, "Which path excites you more? | Option A: Creating complete applications from scratch — building both the screens users see and the server behind it | Option B: Focusing deeply behind the scenes — making servers ultra-fast, handling millions of requests, and managing databases",
                 new String[]{FeatureIndex.TAG_TECH_SERVER_LOGIC, FeatureIndex.TAG_TECH_FULL_SPECTRUM},
                 pred("Backend Developer", "Full Stack Developer")),
 
-            q(3, "What matters more to you? | Option A: Seeing users directly interact with features you built | Option B: Architecting mathematically elegant and rock-solid server code",
-                new String[]{FeatureIndex.TAG_TECH_FULL_SPECTRUM, FeatureIndex.TAG_TECH_SERVER_LOGIC},
-                pred("Backend Developer", "Full Stack Developer")),
-
-            // PAIR B: FRONTEND DEVELOPER vs ANDROID DEVELOPER
-            q(3, "Which platform do you prefer? | Option A: Building for the open web with instant website links | Option B: Building packaged native apps specifically for mobile app stores",
+            // PAIR B: FRONTEND DEVELOPER vs MOBILE DEVELOPER
+            q(3, "Which platform do you prefer? | Option A: Building websites and web applications that anyone can open instantly in any web browser | Option B: Building dedicated mobile apps specifically designed to download and install on smartphones",
                 new String[]{FeatureIndex.TAG_TECH_UI_RENDERING, FeatureIndex.TAG_TECH_MOBILE_CLIENT},
-                pred("Frontend Developer", "Android Developer")),
-
-            q(3, "Which type of feature excites you more? | Option A: Tapping into mobile phone hardware (camera, GPS, sensors) | Option B: Perfecting responsive web styling across desktop and laptop screens",
-                new String[]{FeatureIndex.TAG_TECH_MOBILE_CLIENT, FeatureIndex.TAG_TECH_UI_RENDERING},
-                pred("Frontend Developer", "Android Developer")),
+                pred("Frontend Developer", "Mobile Developer")),
 
             // PAIR C: DEVOPS ENGINEER vs CLOUD ENGINEER
-            q(3, "Which engineering challenge sounds more interesting? | Option A: Speeding up developer releases with automated build pipelines | Option B: Designing multi-region cloud VPC and networking architectures",
+            q(3, "Which engineering challenge sounds more interesting? | Option A: Automating how code gets tested and delivered so developers can ship new updates safely and quickly | Option B: Designing the worldwide cloud network and server infrastructure that keeps large services online 24/7",
                 new String[]{FeatureIndex.TAG_TECH_BUILD_PIPELINE, FeatureIndex.TAG_TECH_CLOUD_SERVICES},
                 pred("DevOps Engineer", "Cloud Engineer")),
 
-            q(3, "Which type of code would you rather write? | Option A: Scripts that automatically spin up cloud servers and clusters | Option B: Automated test, build, and packaging deployment pipelines",
-                new String[]{FeatureIndex.TAG_TECH_CLOUD_SERVICES, FeatureIndex.TAG_TECH_INFRA_PROVISION},
-                pred("DevOps Engineer", "Cloud Engineer")),
-
             // PAIR D: DATA SCIENTIST vs DATA ENGINEER
-            q(3, "Which achievement gives you more pride? | Option A: Discovering a surprising statistical insight that guides business strategy | Option B: Building the high-speed data pipeline that reliably imports that data",
+            q(3, "Which achievement gives you more pride? | Option A: Analyzing complex data and building mathematical AI models to discover hidden trends and make predictions | Option B: Building high-capacity data channels that reliably collect and organize massive streams of data from everywhere",
                 new String[]{FeatureIndex.TAG_TECH_STAT_ANALYSIS, FeatureIndex.TAG_TECH_DATA_PIPELINE},
                 pred("Data Scientist", "Data Engineer")),
 
-            q(3, "If you had one week to improve a system, what would you prioritize? | Option A: Pushing AI model prediction accuracy from 90% to 95% | Option B: Slashing data processing server latency to under 10 milliseconds",
-                new String[]{FeatureIndex.TAG_TECH_MODEL_BUILDING, FeatureIndex.TAG_TECH_DATA_PIPELINE},
-                pred("Data Scientist", "Data Engineer")),
-
             // PAIR E: CYBERSECURITY ENGINEER vs QA / TEST AUTOMATION ENGINEER
-            q(3, "Which type of testing sounds more exciting? | Option A: Probing how a malicious hacker could break into a system | Option B: Verifying that app buttons and forms strictly match design specifications",
+            q(3, "Which type of testing sounds more exciting? | Option A: Thinking like an attacker to find vulnerabilities, security flaws, and protect systems from hackers | Option B: Testing applications thoroughly to catch bugs, crash points, and ensure every button and workflow works smoothly",
                 new String[]{FeatureIndex.TAG_TECH_THREAT_ANALYSIS, FeatureIndex.TAG_TECH_TEST_DESIGN},
                 pred("Cybersecurity Engineer", "QA / Test Automation Engineer")),
 
-            q(3, "Which goal matters more to you? | Option A: Defending company data against digital intruders and attacks | Option B: Ensuring an app never crashes or freezes during normal user flows",
-                new String[]{FeatureIndex.TAG_TECH_SYSTEM_HARDENING, FeatureIndex.TAG_TECH_TEST_AUTOMATION},
-                pred("Cybersecurity Engineer", "QA / Test Automation Engineer")),
-
             // PAIR F: FULL STACK DEVELOPER vs FRONTEND DEVELOPER
-            q(3, "Where would you rather spend an extra day of polish? | Option A: Perfecting visual animations, layout grids, and CSS polish | Option B: Wiring up backend authentication and database queries",
+            q(3, "Where would you rather spend an extra day of polish? | Option A: Spending extra time perfecting the visual details, smooth screen animations, and user interface styling | Option B: Spending extra time connecting user accounts, server logic, and saving information in the database",
                 new String[]{FeatureIndex.TAG_TECH_UI_RENDERING, FeatureIndex.TAG_TECH_FULL_SPECTRUM},
                 pred("Full Stack Developer", "Frontend Developer")),
 
-            q(3, "What is your preferred scope of work? | Option A: Staying strictly focused on visual design and user interfaces | Option B: Owning the full product across UI, servers, and databases",
-                new String[]{FeatureIndex.TAG_TECH_FULL_SPECTRUM, FeatureIndex.TAG_TECH_UI_RENDERING},
-                pred("Full Stack Developer", "Frontend Developer"))
+            // PAIR G: DATA SCIENTIST vs AI / ML ENGINEER
+            q(3, "Which goal describes your ideal day-to-day work? | Option A: Running statistical experiments, exploring datasets, and presenting insight-driven findings to stakeholders | Option B: Deploying a trained model as a scalable production API used by millions of users in a live product",
+                new String[]{FeatureIndex.TAG_TECH_STAT_ANALYSIS, FeatureIndex.TAG_TECH_MODEL_BUILDING},
+                pred("Data Scientist", "AI / ML Engineer"))
         );
     }
 
-    // ─── Section 4 — 16 Specialist Probe Questions (Conditional) ─────────────
-    // 4 specialist roles × 4 dedicated probe questions each.
+    // ─── Section 4 — 15 Specialist Probe Questions (Conditional) ─────────────
+    // 5 specialist roles × 3 dedicated probe questions each.
     // Each group triggered by a requires_any predicate for its role.
     // Serves ONLY when that role is still in the surviving candidate set.
-    // Roles with probes: Data Scientist, Data Engineer, Cybersecurity, DevOps.
+    // Roles with probes: Data Scientist, AI / ML Engineer, Data Engineer, Cybersecurity, DevOps.
     // sectionId=4.
 
     public static List<Question> buildSection4Specialist() {
         return List.of(
 
-            // ── DATA SCIENTIST (4 probes) ──────────────────────────────────────
+            // ── AI / ML ENGINEER (3 probes) ───────────────────────────────────
+            q(4, "I am excited to deploy machine learning models as live APIs that other engineers or products consume in production.",
+                new String[]{FeatureIndex.TAG_TECH_MODEL_BUILDING, FeatureIndex.TAG_TECH_API_DESIGN},
+                anyOf("AI / ML Engineer")),
+
+            q(4, "When I build a model, I immediately think about how to optimize it for low latency and high throughput under real user load.",
+                new String[]{FeatureIndex.TAG_TECH_MODEL_BUILDING, FeatureIndex.TAG_TECH_PERF_OPTIM},
+                anyOf("AI / ML Engineer")),
+
+            q(4, "I enjoy structuring full ML pipelines — from raw data ingestion and feature engineering through training, evaluation, and automated retraining.",
+                new String[]{FeatureIndex.TAG_TECH_DATA_PIPELINE, FeatureIndex.TAG_TECH_MODEL_BUILDING},
+                anyOf("AI / ML Engineer")),
+
+            // ── DATA SCIENTIST (3 probes) ──────────────────────────────────────
             q(4, "When an algorithm gives surprising outputs, I enjoy digging into the math and data distributions to understand why.",
                 new String[]{FeatureIndex.TAG_TECH_STAT_ANALYSIS, FeatureIndex.TAG_TECH_MODEL_BUILDING},
-                anyOf("Data Scientist")),
-
-            q(4, "I am totally fine with the reality that most data experiments fail before finding one useful predictive insight.",
-                new String[]{FeatureIndex.TAG_TECH_MODEL_BUILDING},
                 anyOf("Data Scientist")),
 
             q(4, "Before writing machine learning code, I immediately inspect the dataset for missing numbers, bias, and flawed labels.",
@@ -360,7 +295,7 @@ public class DataSeeder implements ApplicationRunner {
                 new String[]{FeatureIndex.TAG_TECH_MODEL_BUILDING, FeatureIndex.TAG_TECH_STAT_ANALYSIS},
                 anyOf("Data Scientist")),
 
-            // ── DATA ENGINEER (4 probes) ──────────────────────────────────────
+            // ── DATA ENGINEER (3 probes) ──────────────────────────────────────
             q(4, "I care deeply about keeping company databases clean so upstream changes never break downstream reports.",
                 new String[]{FeatureIndex.TAG_TECH_DATA_PIPELINE, FeatureIndex.TAG_TECH_DATA_STORAGE},
                 anyOf("Data Engineer")),
@@ -369,15 +304,11 @@ public class DataSeeder implements ApplicationRunner {
                 new String[]{FeatureIndex.TAG_TECH_DATA_PIPELINE},
                 anyOf("Data Engineer")),
 
-            q(4, "When building data import jobs, I spend just as much effort on automatic error recovery as on the normal flow.",
-                new String[]{FeatureIndex.TAG_TECH_DATA_PIPELINE, FeatureIndex.TAG_TECH_OBSERVABILITY},
-                anyOf("Data Engineer")),
-
             q(4, "I genuinely enjoy writing advanced database queries to crunch and organize massive tables directly in the database.",
                 new String[]{FeatureIndex.TAG_TECH_DATA_STORAGE, FeatureIndex.TAG_TECH_DATA_PIPELINE},
                 anyOf("Data Engineer")),
 
-            // ── CYBERSECURITY ENGINEER (4 probes) ─────────────────────────────
+            // ── CYBERSECURITY ENGINEER (3 probes) ─────────────────────────────
             q(4, "I have the patience to dig through hundreds of login logs or network traffic records to catch one suspicious anomaly.",
                 new String[]{FeatureIndex.TAG_TECH_THREAT_ANALYSIS},
                 anyOf("Cybersecurity Engineer")),
@@ -390,11 +321,7 @@ public class DataSeeder implements ApplicationRunner {
                 new String[]{FeatureIndex.TAG_TECH_SYSTEM_HARDENING, FeatureIndex.TAG_TECH_THREAT_ANALYSIS},
                 anyOf("Cybersecurity Engineer")),
 
-            q(4, "I believe good cybersecurity should protect people without making company computer tools annoying to use.",
-                new String[]{FeatureIndex.TAG_TECH_SYSTEM_HARDENING},
-                anyOf("Cybersecurity Engineer")),
-
-            // ── DEVOPS ENGINEER (4 probes) ────────────────────────────────────
+            // ── DEVOPS ENGINEER (3 probes) ────────────────────────────────────
             q(4, "I believe developers should be able to safely push new code updates live in under fifteen minutes with zero manual hassle.",
                 new String[]{FeatureIndex.TAG_TECH_BUILD_PIPELINE, FeatureIndex.TAG_TECH_INFRA_PROVISION},
                 anyOf("DevOps Engineer")),
@@ -405,10 +332,6 @@ public class DataSeeder implements ApplicationRunner {
 
             q(4, "I believe every server and network setting should be defined in version-controlled scripts, never configured by hand.",
                 new String[]{FeatureIndex.TAG_TECH_INFRA_PROVISION, FeatureIndex.TAG_TECH_CONTAINER_ORCH},
-                anyOf("DevOps Engineer")),
-
-            q(4, "I am happy to spend two days automating a boring software release task to permanently save 30 minutes every week.",
-                new String[]{FeatureIndex.TAG_TECH_BUILD_PIPELINE, FeatureIndex.TAG_TECH_CONTAINER_ORCH},
                 anyOf("DevOps Engineer"))
         );
     }
