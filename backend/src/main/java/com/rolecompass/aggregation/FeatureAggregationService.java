@@ -172,6 +172,10 @@ public class FeatureAggregationService {
         for (Map.Entry<Long, Integer> entry : answerMap.entrySet()) {
             Question question = questionMap.get(entry.getKey());
             if (question == null || question.getDimensionTags() == null) continue;
+            // Section 3 questions are pairwise preference decisions (Option A vs Option B) used
+            // strictly by the Adaptive Routing Engine to break candidate ties. They are not direct
+            // Likert skill ratings and must not contaminate the 20-feature technical ML input vector.
+            if (question.getSectionId() != null && question.getSectionId() == 3) continue;
             for (String tag : question.getDimensionTags()) {
                 if (buckets.containsKey(tag)) {
                     buckets.get(tag).add(entry.getValue());
@@ -213,6 +217,7 @@ public class FeatureAggregationService {
         for (Map.Entry<Long, Integer> entry : answerMap.entrySet()) {
             Question question = questionMap.get(entry.getKey());
             if (question == null || question.getDimensionTags() == null) continue;
+            if (question.getSectionId() != null && question.getSectionId() == 3) continue;
             for (String tag : question.getDimensionTags()) {
                 int index = FeatureIndex.indexForTag(tag);
                 if (index >= 0 && index < FeatureIndex.TOTAL_FEATURES) {

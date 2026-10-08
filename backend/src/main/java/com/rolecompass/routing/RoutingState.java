@@ -92,17 +92,18 @@ public record RoutingState(
         this(sessionId, fsmState, candidateRoles, psychProfile, techVector, answeredCount,
              answeredQuestionIds, rawAnswers, eliminationLog, null, null);
     }
-    /** All 10 role names in canonical order (matches AGENTS.md). */
+    /** All 11 role names in canonical order. */
     public static final List<String> ALL_ROLES = List.of(
             "Backend Developer",
             "Frontend Developer",
             "Full Stack Developer",
             "Data Scientist",
+            "AI / ML Engineer",
             "Data Engineer",
             "Cybersecurity Engineer",
             "DevOps Engineer",
             "Cloud Engineer",
-            "Android Developer",
+            "Mobile Developer",
             "QA / Test Automation Engineer"
     );
 

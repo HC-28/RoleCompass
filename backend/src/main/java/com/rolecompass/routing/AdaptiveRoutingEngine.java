@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
  * <p><b>Elimination rules at PRUNE_PSYCHOMETRICS</b> (O*NET DB 31.0 thresholds):</p>
  * <ul>
  *   <li>Artistic Gate: A &lt; 0.35 → eliminate Frontend Developer</li>
- *   <li>Investigative Gate: I &lt; 0.60 → eliminate Data Scientist</li>
+ *   <li>Investigative Gate: I &lt; 0.60 → eliminate Data Scientist, AI / ML Engineer</li>
  *   <li>Realistic Gate: R &lt; 0.40 → eliminate DevOps Engineer, Cloud Engineer</li>
  *   <li>Anti-Artistic Gate: A &gt; 0.55 → eliminate Data Engineer, Cybersecurity Engineer</li>
  *   <li>Conventional Gate: C &lt; 0.65 → eliminate Data Engineer, QA / Test Automation Engineer</li>
@@ -46,8 +46,8 @@ import java.util.stream.Collectors;
  *
  * <p><b>Elimination rules at PRUNE_TECH_SKILLS:</b></p>
  * <ul>
- *   <li>Mobile floor: MOBILE &lt; 0.40 → eliminate Android Developer</li>
- *   <li>Stats+Model floor: STATS &lt; 0.50 AND MODEL &lt; 0.50 → eliminate Data Scientist</li>
+ *   <li>Mobile floor: MOBILE &lt; 0.40 → eliminate Mobile Developer</li>
+ *   <li>Stats+Model floor: STATS &lt; 0.50 AND MODEL &lt; 0.50 → eliminate Data Scientist, AI / ML Engineer</li>
  *   <li>Security floor: THREAT &lt; 0.40 AND HARDENING &lt; 0.40 → eliminate Cybersecurity Engineer</li>
  * </ul>
  */
@@ -58,22 +58,20 @@ public class AdaptiveRoutingEngine {
     // ─── Constants ────────────────────────────────────────────────────────────
 
     /** Total Section 1 questions every user must complete before psychometric pruning. */
-    public static final int SECTION_1_QUESTION_COUNT = 16;
+    public static final int SECTION_1_QUESTION_COUNT = 12;
 
     /**
-     * Maximum Section 2 technical questions (2 per domain × 20 domains).
-     * Actual questions answered is typically 22–30 due to the adaptive Q2 skip rule.
+     * Section 2 technical questions — exactly 1 per domain × 20 domains.
+     * There is no adaptive Q2 skip; each domain has a single focused question.
      */
-    public static final int SECTION_2_MAX_QUESTION_COUNT = 40;
+    public static final int SECTION_2_MAX_QUESTION_COUNT = 20;
 
     /** Number of questions delivered per batch to the client (Sections 1, 3, 4). */
     public static final int BATCH_SIZE = 4;
 
     /**
-     * Section 2 delivers exactly ONE question per API call so the adaptive Q2 skip
-     * fires correctly between questions rather than within a pre-packed batch.
-     * After Q1 is answered: if extreme (\u2264 LOW or \u2265 HIGH) the next call returns Q1
-     * of the following domain; if not extreme, Q2 of the same domain is returned next.
+     * Section 2 delivers questions in a single batch — all 20 questions at once
+     * since there is no adaptive Q2 skip to manage per-question.
      */
     public static final int SECTION_2_BATCH_SIZE = 1;
 
@@ -130,7 +128,7 @@ public class AdaptiveRoutingEngine {
      * (Data Scientist, Data Engineer, Cybersecurity Engineer, DevOps Engineer)
      */
     private static final Set<String> SECTION_4_GATE_ROLES = Set.of(
-            "Data Scientist", "Data Engineer", "Cybersecurity Engineer", "DevOps Engineer"
+            "Data Scientist", "AI / ML Engineer", "Data Engineer", "Cybersecurity Engineer", "DevOps Engineer"
     );
 
     private final QuestionRepository questionRepository;
@@ -475,13 +473,17 @@ public class AdaptiveRoutingEngine {
             log.debug("Artistic gate: A={} < {} → eliminated Frontend Developer", A, THRESHOLD_A_LOW);
         }
 
-        // Investigative Gate: low analytical research drive → eliminate Data Scientist
+        // Investigative Gate: low analytical research drive → eliminate Data Scientist AND AI / ML Engineer
         if (I < THRESHOLD_I_LOW) {
             eliminationReasons.put("Data Scientist",
                 "Your answers suggest you prefer building practical systems over deep analytical research. "
               + "Data Science demands a strong drive to investigate complex questions, "
               + "run statistical experiments, and derive insights from data — even without a clear outcome in advance.");
-            log.debug("Investigative gate: I={} < {} → eliminated Data Scientist", I, THRESHOLD_I_LOW);
+            eliminationReasons.put("AI / ML Engineer",
+                "Your answers suggest you prefer practical implementation over analytical research. "
+              + "AI / ML Engineering requires a strong investigative mindset for designing experiments, "
+              + "debugging model behaviour, and reasoning rigorously about data quality and model trade-offs.");
+            log.debug("Investigative gate: I={} < {} → eliminated Data Scientist, AI / ML Engineer", I, THRESHOLD_I_LOW);
         }
 
         // Realistic Gate: low hands-on / systems-building drive → eliminate DevOps, Cloud
@@ -570,12 +572,12 @@ public class AdaptiveRoutingEngine {
         Map<String, String> eliminationReasons = new LinkedHashMap<>();
 
         if (mobile < THRESHOLD_MOBILE) {
-            eliminationReasons.put("Android Developer",
+            eliminationReasons.put("Mobile Developer",
                 "Your answers showed little interest in mobile application development. "
-              + "Android development requires a genuine enthusiasm for building apps that "
+              + "Mobile development requires a genuine enthusiasm for building apps that "
               + "run on smartphones — including working with touch interfaces, device sensors, "
               + "and mobile-specific performance constraints.");
-            log.debug("Mobile floor: MOBILE={} < {} → eliminated Android Developer", mobile, THRESHOLD_MOBILE);
+            log.debug("Mobile floor: MOBILE={} < {} → eliminated Mobile Developer", mobile, THRESHOLD_MOBILE);
         }
 
         if (stats < THRESHOLD_STATS && model < THRESHOLD_MODEL) {
@@ -584,7 +586,12 @@ public class AdaptiveRoutingEngine {
               + "and machine learning. Data Science requires genuine interest in "
               + "working with numbers, designing experiments, and building predictive models "
               + "from data — not just using data as a byproduct of other work.");
-            log.debug("Stats+Model floor: STATS={} MODEL={} → eliminated Data Scientist", stats, model);
+            eliminationReasons.put("AI / ML Engineer",
+                "Your answers showed limited enthusiasm for both statistical analysis and "
+              + "machine learning model development. AI / ML Engineering requires hands-on "
+              + "excitement for designing, training, and deploying models in production — "
+              + "it is not a good fit without a genuine pull toward data and model thinking.");
+            log.debug("Stats+Model floor: STATS={} MODEL={} → eliminated Data Scientist, AI / ML Engineer", stats, model);
         }
 
         if (threat < THRESHOLD_THREAT && hardening < THRESHOLD_HARDENING) {
@@ -630,86 +637,87 @@ public class AdaptiveRoutingEngine {
             Integer ans = raw.get(q.getId());
             if (ans == null) continue;
 
-            // Pair A: Backend Developer vs Full Stack Developer (Q57, Q58)
+            // Pair A: Backend Developer vs Full Stack Developer
             // Option A = Full Stack, Option B = Backend
-            if (q.getText().contains("Build complete apps end-to-end") || q.getText().contains("Seeing users directly interact")) {
-                if (ans >= 5 && state.candidateRoles().contains("Backend Developer")) {
+            if (q.getText().contains("Creating complete applications from scratch")) {
+                if (ans >= 4 && state.candidateRoles().contains("Backend Developer")) {
                     eliminationReasons.put("Backend Developer",
-                            "In pairwise comparison, you strongly preferred full-stack end-to-end development over specialized backend server internals.");
-                } else if (ans <= 1 && state.candidateRoles().contains("Full Stack Developer")) {
+                            "In pairwise comparison, you preferred full-stack end-to-end development over specialized backend server internals.");
+                } else if (ans <= 2 && state.candidateRoles().contains("Full Stack Developer")) {
                     eliminationReasons.put("Full Stack Developer",
-                            "In pairwise comparison, you strongly preferred deep backend server architecture and data systems over full-stack breadth.");
+                            "In pairwise comparison, you preferred deep backend server architecture and data systems over full-stack breadth.");
                 }
             }
 
-            // Pair B: Frontend Developer vs Android Developer (Q59, Q60)
-            if (q.getText().contains("open web with instant website links")) {
-                if (ans >= 5 && state.candidateRoles().contains("Android Developer")) {
-                    eliminationReasons.put("Android Developer",
-                            "In pairwise comparison, you strongly preferred open web architecture over native mobile app store development.");
-                } else if (ans <= 1 && state.candidateRoles().contains("Frontend Developer")) {
+            // Pair B: Frontend Developer vs Mobile Developer
+            // Option A = open web (Frontend), Option B = native mobile (Mobile)
+            if (q.getText().contains("Building websites and web applications")) {
+                if (ans >= 4 && state.candidateRoles().contains("Mobile Developer")) {
+                    eliminationReasons.put("Mobile Developer",
+                            "In pairwise comparison, you preferred open web architecture over native mobile app development.");
+                } else if (ans <= 2 && state.candidateRoles().contains("Frontend Developer")) {
                     eliminationReasons.put("Frontend Developer",
-                            "In pairwise comparison, you strongly preferred mobile applications over desktop web applications.");
-                }
-            } else if (q.getText().contains("phone hardware")) {
-                if (ans >= 5 && state.candidateRoles().contains("Frontend Developer")) {
-                    eliminationReasons.put("Frontend Developer",
-                            "In pairwise comparison, you strongly preferred mobile device hardware integration over desktop web development.");
-                } else if (ans <= 1 && state.candidateRoles().contains("Android Developer")) {
-                    eliminationReasons.put("Android Developer",
-                            "In pairwise comparison, you preferred open web design over mobile device hardware development.");
+                            "In pairwise comparison, you preferred mobile applications over desktop web applications.");
                 }
             }
 
-            // Pair C: DevOps Engineer vs Cloud Engineer (Q61, Q62)
-            if (q.getText().contains("speeding up developer releases")) {
-                if (ans >= 5 && state.candidateRoles().contains("Cloud Engineer")) {
+            // Pair C: DevOps Engineer vs Cloud Engineer
+            // Option A = release pipelines (DevOps), Option B = cloud VPC (Cloud)
+            if (q.getText().contains("Automating how code gets tested and delivered")) {
+                if (ans >= 4 && state.candidateRoles().contains("Cloud Engineer")) {
                     eliminationReasons.put("Cloud Engineer",
-                            "In pairwise comparison, you strongly preferred software delivery pipelines and release velocity over cloud network infrastructure.");
-                } else if (ans <= 1 && state.candidateRoles().contains("DevOps Engineer")) {
+                            "In pairwise comparison, you preferred automated software delivery over cloud network infrastructure.");
+                } else if (ans <= 2 && state.candidateRoles().contains("DevOps Engineer")) {
                     eliminationReasons.put("DevOps Engineer",
-                            "In pairwise comparison, you strongly preferred cloud network infrastructure over release pipeline scripting.");
-                }
-            } else if (q.getText().contains("automatically spin up cloud servers")) {
-                if (ans >= 5 && state.candidateRoles().contains("DevOps Engineer")) {
-                    eliminationReasons.put("DevOps Engineer",
-                            "In pairwise comparison, you strongly preferred automated cloud infrastructure provisioning over deployment pipeline configuration.");
-                } else if (ans <= 1 && state.candidateRoles().contains("Cloud Engineer")) {
-                    eliminationReasons.put("Cloud Engineer",
-                            "In pairwise comparison, you preferred build pipeline automation over cloud server provisioning.");
+                            "In pairwise comparison, you preferred cloud network infrastructure over release pipeline scripting.");
                 }
             }
 
-            // Pair D: Data Scientist vs Data Engineer (Q63, Q64)
-            if (q.getText().contains("surprising statistical insight") || q.getText().contains("accuracy from 90% to 95%")) {
-                if (ans >= 5 && state.candidateRoles().contains("Data Engineer")) {
+            // Pair D: Data Scientist vs Data Engineer
+            // Option A = statistical insight (Data Scientist), Option B = data pipeline (Data Engineer)
+            if (q.getText().contains("Analyzing complex data and building mathematical AI models")) {
+                if (ans >= 4 && state.candidateRoles().contains("Data Engineer")) {
                     eliminationReasons.put("Data Engineer",
-                            "In pairwise comparison, you strongly preferred predictive accuracy and statistical insights over high-throughput data plumbing.");
-                } else if (ans <= 1 && state.candidateRoles().contains("Data Scientist")) {
+                            "In pairwise comparison, you preferred predictive AI modeling and statistical analysis over high-capacity data plumbing.");
+                } else if (ans <= 2 && state.candidateRoles().contains("Data Scientist")) {
                     eliminationReasons.put("Data Scientist",
-                            "In pairwise comparison, you strongly preferred building robust data pipelines and low-latency infrastructure over statistical model tuning.");
+                            "In pairwise comparison, you preferred building high-capacity data channels over statistical model tuning.");
                 }
             }
 
-            // Pair E: Cybersecurity Engineer vs QA / Test Automation Engineer (Q65, Q66)
-            if (q.getText().contains("how a malicious hacker could break") || q.getText().contains("Defending company data")) {
-                if (ans >= 5 && state.candidateRoles().contains("QA / Test Automation Engineer")) {
+            // Pair E: Cybersecurity Engineer vs QA / Test Automation Engineer
+            // Option A = hacker testing (Cybersecurity), Option B = functional testing (QA)
+            if (q.getText().contains("Thinking like an attacker to find vulnerabilities")) {
+                if (ans >= 4 && state.candidateRoles().contains("QA / Test Automation Engineer")) {
                     eliminationReasons.put("QA / Test Automation Engineer",
-                            "In pairwise comparison, you strongly preferred adversarial security defense and threat protection over functional software testing.");
-                } else if (ans <= 1 && state.candidateRoles().contains("Cybersecurity Engineer")) {
+                            "In pairwise comparison, you preferred adversarial security defense and threat protection over functional software testing.");
+                } else if (ans <= 2 && state.candidateRoles().contains("Cybersecurity Engineer")) {
                     eliminationReasons.put("Cybersecurity Engineer",
-                            "In pairwise comparison, you strongly preferred software quality assurance and reliable user workflows over security exploit analysis.");
+                            "In pairwise comparison, you preferred software quality assurance and reliable user workflows over security exploit analysis.");
                 }
             }
 
-            // Pair F: Full Stack Developer vs Frontend Developer (Q67, Q68)
-            if (q.getText().contains("visual animations, layout grids") || q.getText().contains("Staying strictly focused on visual design")) {
-                if (ans >= 5 && state.candidateRoles().contains("Full Stack Developer")) {
+            // Pair F: Full Stack Developer vs Frontend Developer
+            // Option A = UI polish (Frontend), Option B = backend auth/DB (Full Stack)
+            if (q.getText().contains("Spending extra time perfecting the visual details")) {
+                if (ans >= 4 && state.candidateRoles().contains("Full Stack Developer")) {
                     eliminationReasons.put("Full Stack Developer",
-                            "In pairwise comparison, you strongly preferred dedicated UI and visual design over full-stack backend and database responsibilities.");
-                } else if (ans <= 1 && state.candidateRoles().contains("Frontend Developer")) {
+                            "In pairwise comparison, you preferred dedicated UI and visual design over full-stack backend and database responsibilities.");
+                } else if (ans <= 2 && state.candidateRoles().contains("Frontend Developer")) {
                     eliminationReasons.put("Frontend Developer",
-                            "In pairwise comparison, you preferred complete end-to-end full stack ownership over exclusively frontend layout work.");
+                            "In pairwise comparison, you preferred complete end-to-end full stack ownership over exclusively frontend visual work.");
+                }
+            }
+
+            // Pair G: Data Scientist vs AI / ML Engineer
+            // Option A = research/insights (Data Scientist), Option B = production deployment (AI / ML Engineer)
+            if (q.getText().contains("Running statistical experiments, exploring datasets")) {
+                if (ans >= 4 && state.candidateRoles().contains("AI / ML Engineer")) {
+                    eliminationReasons.put("AI / ML Engineer",
+                            "In pairwise comparison, you preferred research-driven data exploration and insight communication over production model deployment engineering.");
+                } else if (ans <= 2 && state.candidateRoles().contains("Data Scientist")) {
+                    eliminationReasons.put("Data Scientist",
+                            "In pairwise comparison, you preferred shipping scalable production ML systems over exploratory statistical analysis and stakeholder reporting.");
                 }
             }
         }
