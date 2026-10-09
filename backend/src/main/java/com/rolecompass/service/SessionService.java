@@ -22,6 +22,7 @@ import com.rolecompass.routing.FsmState;
 import com.rolecompass.routing.RoleProfile;
 import com.rolecompass.routing.RoutingDecision;
 import com.rolecompass.routing.RoutingState;
+import com.rolecompass.routing.Section3SignalAdjuster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,7 @@ public class SessionService {
     private final AdaptiveRoutingEngine routingEngine;
     private final FeatureAggregationService featureAggregationService;
     private final MlClientService mlClientService;
+    private final Section3SignalAdjuster section3SignalAdjuster;
     private final ObjectMapper objectMapper;
 
     // ─── Session Start ────────────────────────────────────────────────────────
@@ -206,6 +208,15 @@ public class SessionService {
                 .map(id -> RoleProfile.nameForId(id.intValue()))
                 .collect(Collectors.toList());
 
+        // Load all raw answers for Section 3 Bayesian adjustment
+        List<Answer> allAnswers = answerRepository.findByIdSessionId(sessionId);
+        Map<Long, Integer> rawAnswers = allAnswers.stream()
+                .collect(Collectors.toMap(
+                        a -> a.getId().getQuestionId(),
+                        Answer::getLikertValue,
+                        (existing, replacement) -> existing
+                ));
+
         PredictionResponse response;
         try {
             response = mlClientService.score(techVector, candidateRoles);
@@ -217,12 +228,18 @@ public class SessionService {
             response = mlClientService.fallback(candidateRoles);
         }
 
+        // Apply Bayesian Section 3 preference signal adjustment (only when ML gave full probabilities)
+        if (!response.isFallback()) {
+            response = section3SignalAdjuster.adjust(response, rawAnswers, candidateRoles);
+        }
+
         // Attach the elimination log accumulated during routing gate passes
         List<EliminatedRole> eliminatedRoles = deserialiseEliminationLog(session);
         response = PredictionResponse.builder()
                 .predictedRole(response.getPredictedRole())
                 .confidence(response.getConfidence())
                 .alternates(response.getAlternates())
+                .allProbabilities(response.getAllProbabilities())
                 .eliminatedRoles(eliminatedRoles)
                 .fallback(response.isFallback())
                 .build();

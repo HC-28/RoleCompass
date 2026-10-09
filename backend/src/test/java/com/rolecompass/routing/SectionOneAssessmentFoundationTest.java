@@ -1,3 +1,4 @@
+
 package com.rolecompass.routing;
 
 import com.rolecompass.aggregation.FeatureAggregationService;
@@ -56,6 +57,9 @@ class SectionOneAssessmentFoundationTest {
     private SessionService sessionService;
     private MlClientService mlClientService = new MlClientService();
 
+    @Mock
+    private Section3SignalAdjuster section3SignalAdjuster;
+
     @BeforeEach
     void setUp() {
         seededQuestions = DataSeeder.buildSection1();
@@ -82,16 +86,16 @@ class SectionOneAssessmentFoundationTest {
                 routingEngine,
                 aggregationService,
                 mlClientService,
-                new ObjectMapper()
-        );
+                section3SignalAdjuster,
+                new ObjectMapper());
     }
 
     // ── 1. Section 1 Count & Universal Rule ──────────────────────────────────
 
     @Test
-    @DisplayName("Requirement 1: Section 1 contains exactly 16 psychological questions")
-    void sectionOne_hasExpected16Questions() {
-        assertThat(seededQuestions).hasSize(16);
+    @DisplayName("Requirement 1: Section 1 contains exactly 12 psychological questions")
+    void sectionOne_hasExpected12Questions() {
+        assertThat(seededQuestions).hasSize(12);
     }
 
     @Test
@@ -129,7 +133,8 @@ class SectionOneAssessmentFoundationTest {
             String lower = q.getText().toLowerCase(Locale.ROOT);
             for (String prohibited : prohibitedTerms) {
                 assertThat(lower)
-                        .as("Question %d '%s' must not contain prohibited term '%s'", q.getId(), q.getText(), prohibited)
+                        .as("Question %d '%s' must not contain prohibited term '%s'", q.getId(), q.getText(),
+                                prohibited)
                         .doesNotContain(prohibited);
             }
         }
@@ -138,7 +143,7 @@ class SectionOneAssessmentFoundationTest {
     // ── 3. Internal Dimension Tags ────────────────────────────────────────────
 
     @Test
-    @DisplayName("Requirement 5: Section 1 covers all key psychological dimensions")
+    @DisplayName("Requirement 5: Section 1 covers all 6 Holland RIASEC psychological dimensions")
     void sectionOne_dimensionTagDistribution() {
         Set<String> presentTags = new HashSet<>();
         for (Question q : seededQuestions) {
@@ -152,12 +157,7 @@ class SectionOneAssessmentFoundationTest {
                 FeatureIndex.TAG_DIM_ARTISTIC,
                 FeatureIndex.TAG_DIM_SOCIAL,
                 FeatureIndex.TAG_DIM_ENTERPRISING,
-                FeatureIndex.TAG_DIM_CONVENTIONAL,
-                FeatureIndex.TAG_DIM_DATA_IDEAS,
-                FeatureIndex.TAG_DIM_THINGS_PEOPLE,
-                FeatureIndex.TAG_DIM_BREADTH_DEPTH,
-                FeatureIndex.TAG_DIM_STRUCT_AMBIG
-        );
+                FeatureIndex.TAG_DIM_CONVENTIONAL);
     }
 
     @Test
@@ -199,7 +199,7 @@ class SectionOneAssessmentFoundationTest {
                 .id(sessionId)
                 .userId(mockUser.getId())
                 .status("in_progress")
-                .candidateRoleIds(new Long[]{1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L})
+                .candidateRoleIds(new Long[] { 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L })
                 .answeredVector(new Double[20])
                 .answeredDimsMask(new Boolean[20])
                 .build();
@@ -218,7 +218,8 @@ class SectionOneAssessmentFoundationTest {
         }
         when(answerRepository.findByIdSessionId(sessionId)).thenReturn(all10Answers);
 
-        Map<String, Object> response = sessionService.submitAnswers(sessionId, mockUser, new AnswerRequest(submittedItems));
+        Map<String, Object> response = sessionService.submitAnswers(sessionId, mockUser,
+                new AnswerRequest(submittedItems));
 
         assertThat(response.get("status")).isEqualTo("in_progress");
         assertThat(response.get("answers_count")).isEqualTo(10);

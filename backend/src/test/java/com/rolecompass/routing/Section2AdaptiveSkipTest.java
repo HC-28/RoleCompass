@@ -80,29 +80,28 @@ class Section2AdaptiveSkipTest {
     }
 
     @Test
-    @DisplayName("Section 2 maximum is 40 questions (2 questions × 20 domains)")
-    void section2MaximumIs40() {
+    @DisplayName("Section 2 maximum is 20 questions (1 question × 20 domains)")
+    void section2MaximumIs20() {
         assertThat(AdaptiveRoutingEngine.SECTION_2_MAX_QUESTION_COUNT)
-                .as("2 questions per domain × 20 domains = 40 maximum")
-                .isEqualTo(40);
+                .as("1 question per domain × 20 domains = 20 maximum")
+                .isEqualTo(20);
     }
 
     @Test
-    @DisplayName("Minimum answerable Section 2 questions is 20 when all domains skip Q2")
+    @DisplayName("Minimum answerable Section 2 questions is 20 (all domains covered)")
     void minimumSection2QuestionsWhenAllExtreme() {
-        int domains = AdaptiveRoutingEngine.SECTION_2_MAX_QUESTION_COUNT / 2; // 20 domains
-        int minIfAllSkipped = domains; // 1 Q per domain × 20 = 20
-        assertThat(minIfAllSkipped)
-                .as("When all 20 domains resolve on Q1, only 20 questions are needed")
+        int domains = AdaptiveRoutingEngine.SECTION_2_MAX_QUESTION_COUNT; // 20 domains
+        assertThat(domains)
+                .as("20 technical questions are presented in Section 2")
                 .isEqualTo(20);
     }
 
     @Test
     @DisplayName("Section 1 requires exactly 16 questions before psychometric pruning")
-    void section1Requires16Questions() {
+    void section1Requires12Questions() {
         assertThat(AdaptiveRoutingEngine.SECTION_1_QUESTION_COUNT)
-                .as("Section 1 must have exactly 16 psychometric questions")
-                .isEqualTo(16);
+                .as("Section 1 must have exactly 12 psychometric questions")
+                .isEqualTo(12);
     }
 
     @Test

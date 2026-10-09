@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Response body for {@code POST /api/session/{id}/predict}.
@@ -35,6 +36,15 @@ public class PredictionResponse {
     @JsonProperty("eliminated_roles")
     @Builder.Default
     private List<EliminatedRole> eliminatedRoles = List.of();
+
+    /**
+     * Full probability distribution over all 11 roles from the Random Forest.
+     * Keys = role names, values = raw model probabilities (NOT renormalized to candidate set).
+     * Used by Section3SignalAdjuster for Bayesian posterior adjustment before final winner selection.
+     */
+    @JsonProperty("all_probabilities")
+    @Builder.Default
+    private Map<String, Double> allProbabilities = Map.of();
 
     /**
      * True when the ML service was unreachable and the result was produced by

@@ -77,10 +77,20 @@ public class MlClientService {
             }
         }
 
+        // Parse full probability distribution (all 11 roles) for Bayesian adjustment
+        @SuppressWarnings("unchecked")
+        Map<String, Object> rawAllProbs = (Map<String, Object>) raw.get("all_probabilities");
+        Map<String, Double> allProbabilities = new LinkedHashMap<>();
+        if (rawAllProbs != null) {
+            rawAllProbs.forEach((role, prob) ->
+                    allProbabilities.put(role, ((Number) prob).doubleValue()));
+        }
+
         return PredictionResponse.builder()
                 .predictedRole(predictedRole)
                 .confidence(confidence)
                 .alternates(alternates)
+                .allProbabilities(allProbabilities)
                 .build();
     }
 
