@@ -52,10 +52,9 @@ export const INTEREST_OPTIONS = [
  * Directly chooses between Option A and Option B. No generic agreement or Yes/No.
  */
 export const PREFERENCE_OPTIONS = [
-  { value: 5, label: 'Definitely Option A', shortLabel: 'Strong A' },
-  { value: 4, label: 'Lean Option A',       shortLabel: 'Lean A' },
-  { value: 2, label: 'Lean Option B',       shortLabel: 'Lean B' },
-  { value: 1, label: 'Definitely Option B', shortLabel: 'Strong B' },
+  { value: 5, label: 'Option A',           shortLabel: 'Option A' },
+  { value: 3, label: 'Both Appeal to Me', shortLabel: 'Both' },
+  { value: 1, label: 'Option B',           shortLabel: 'Option B' },
 ]
 
 /** Response type identifiers returned by the backend in question.response_type */
@@ -71,11 +70,12 @@ export const ALL_ROLES = [
   'Frontend Developer',
   'Full Stack Developer',
   'Data Scientist',
+  'AI / ML Engineer',
   'Data Engineer',
   'Cybersecurity Engineer',
   'DevOps Engineer',
   'Cloud Engineer',
-  'Android Developer',
+  'Mobile Developer',
   'QA / Test Automation Engineer',
 ]
 
@@ -105,12 +105,20 @@ export const ROLE_METADATA = {
     archetype: 'Polymath Builder',
   },
   'Data Scientist': {
-    tagline: 'Machine Learning, Statistical Modeling & Quantitative Insights',
-    summary: 'Transforms complex enterprise and experimental datasets into predictive models and actionable mathematical insights—leveraging statistical theory, machine learning, and deep exploratory data analysis.',
-    keySkills: ['Machine Learning & Algorithms', 'Applied Statistics & Probability', 'Feature Engineering', 'Data Exploration & Python'],
+    tagline: 'Statistical Analysis, Quantitative Research & Data Insights',
+    summary: 'Extracts deep insights from complex datasets using advanced probability, statistical experiments, and hypothesis testing—answering strategic business and scientific questions with mathematical rigor.',
+    keySkills: ['Applied Statistics & Probability', 'Hypothesis Testing & A/B Experiments', 'Exploratory Data Analysis', 'Python, R & SQL Analytics'],
     workStyle: 'Analytical, investigative, and drawn to hypothesis-driven discovery.',
     accentColor: 'purple',
     archetype: 'Quantitative Researcher',
+  },
+  'AI / ML Engineer': {
+    tagline: 'Deep Learning, Neural Networks & Production MLOps Systems',
+    summary: 'Designs, trains, and operationalizes deep learning models, neural networks, and generative AI services—optimizing inference throughput, model pipelines, and production deployment at scale.',
+    keySkills: ['Deep Learning & Neural Networks', 'PyTorch, TensorFlow & Transformers', 'Model Deployment & MLOps', 'Inference Optimization & GPUs'],
+    workStyle: 'Engineering-driven, experimental, and focused on intelligent systems in production.',
+    accentColor: 'fuchsia',
+    archetype: 'Intelligent Systems Architect',
   },
   'Data Engineer': {
     tagline: 'High-Volume Data Pipelines, Warehouses & Distributed ETL',
@@ -144,11 +152,11 @@ export const ROLE_METADATA = {
     accentColor: 'sky',
     archetype: 'Cloud Infrastructure Architect',
   },
-  'Android Developer': {
-    tagline: 'Native Mobile Engineering, Hardware Integration & Fluid Mobile UX',
-    summary: 'Develops native Android applications optimized for diverse hardware specs, screen densities, and mobile operating system constraints—crafting fluid touch experiences, offline storage, and background services.',
-    keySkills: ['Native Android & Kotlin', 'Mobile UI & Lifecycle', 'Device APIs & Sensors', 'Memory & Battery Optimization'],
-    workStyle: 'Product-oriented, tactile, and dedicated to native mobile user delight.',
+  'Mobile Developer': {
+    tagline: 'Native & Cross-Platform Mobile Apps, Touch UX & Device Hardware',
+    summary: 'Develops responsive mobile applications across iOS, Android, and cross-platform frameworks (Flutter/React Native)—crafting fluid touch experiences, offline data synchronization, and hardware-accelerated interactions.',
+    keySkills: ['iOS & Android Engineering (Swift/Kotlin)', 'Cross-Platform Frameworks (Flutter/React Native)', 'Touch UI & Mobile Lifecycles', 'Device Sensors & Offline Storage'],
+    workStyle: 'Product-oriented, tactile, and dedicated to seamless mobile user experiences.',
     accentColor: 'teal',
     archetype: 'Mobile Platform Specialist',
   },

@@ -59,12 +59,13 @@ export default function PreferenceScale({ questionText, selectedValue, onSelect,
         </div>
       )}
 
-      {/* 4 Crisp Path Choice Buttons */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {PREFERENCE_OPTIONS.map(({ value, label }, idx) => {
+      {/* 3 Crisp Path Choice Buttons */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {PREFERENCE_OPTIONS.map(({ value, label, shortLabel }) => {
           const isSelected = selectedValue === value
-          const isOptionA = idx < 2  // 5 or 4 (Option A side)
-          const isOptionB = idx >= 2 // 2 or 1 (Option B side)
+          const isOptionA = value === 5
+          const isNeutral = value === 3
+          const isOptionB = value === 1
 
           return (
             <button
@@ -75,28 +76,38 @@ export default function PreferenceScale({ questionText, selectedValue, onSelect,
               onClick={() => onSelect(value)}
               aria-checked={isSelected}
               aria-label={label}
-              className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border py-3 px-2 text-center transition-all duration-150
+              className={`flex flex-col items-center justify-center gap-2 rounded-xl border py-4 px-3 text-center transition-all duration-150
                 ${isSelected
                   ? isOptionA
-                    ? 'border-indigo-600 bg-indigo-50/95 text-indigo-950 ring-2 ring-indigo-400/40 dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-white shadow-sm'
-                    : 'border-amber-600 bg-amber-50/95 text-amber-950 ring-2 ring-amber-400/40 dark:border-amber-500 dark:bg-amber-950/60 dark:text-white shadow-sm'
+                    ? 'border-indigo-600 bg-indigo-50/95 text-indigo-950 ring-2 ring-indigo-400/40 dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-white shadow-md'
+                    : isNeutral
+                    ? 'border-emerald-600 bg-emerald-50/95 text-emerald-950 ring-2 ring-emerald-400/40 dark:border-emerald-500 dark:bg-emerald-950/60 dark:text-white shadow-md'
+                    : 'border-amber-600 bg-amber-50/95 text-amber-950 ring-2 ring-amber-400/40 dark:border-amber-500 dark:bg-amber-950/60 dark:text-white shadow-md'
                   : 'border-slate-200 bg-white/70 text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-800/80'
-                } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer active:scale-95'}`}
+                } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer active:scale-[0.98]'}`}
             >
               {/* Visual indicator tag */}
               <span
-                className={`text-[10px] font-bold uppercase tracking-wider ${
+                className={`text-[11px] font-bold uppercase tracking-wider ${
                   isSelected
-                    ? isOptionA ? 'text-indigo-600 dark:text-indigo-300' : 'text-amber-600 dark:text-amber-300'
-                    : isOptionA ? 'text-indigo-500 dark:text-indigo-400' : 'text-amber-500 dark:text-amber-400'
+                    ? isOptionA
+                      ? 'text-indigo-600 dark:text-indigo-300'
+                      : isNeutral
+                      ? 'text-emerald-600 dark:text-emerald-300'
+                      : 'text-amber-600 dark:text-amber-300'
+                    : isOptionA
+                    ? 'text-indigo-500 dark:text-indigo-400'
+                    : isNeutral
+                    ? 'text-emerald-500 dark:text-emerald-400'
+                    : 'text-amber-500 dark:text-amber-400'
                 }`}
                 aria-hidden="true"
               >
-                {value === 5 ? 'Definitely A' : value === 4 ? 'Lean A' : value === 2 ? 'Lean B' : 'Definitely B'}
+                {isOptionA ? 'Prefer Option A' : isNeutral ? 'Equal Interest' : 'Prefer Option B'}
               </span>
 
               {/* Label */}
-              <span className="text-xs font-semibold leading-tight">{label}</span>
+              <span className="text-sm font-semibold leading-tight">{label}</span>
             </button>
           )
         })}
